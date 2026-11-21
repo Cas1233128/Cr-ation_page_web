@@ -1,0 +1,253 @@
+<title>Carnet Data Forêt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Mise en page : une colonne de lecture, en-tête-bilan puis le parcours en quatre étapes ; chaque module est une ligne qu'on déplie pour noter. */
+:root {
+  --bg: #eef2ef; --panel: #ffffff; --line: #d3dcd6; --ink: #17231d; --muted: #5a6a62;
+  --accent: #1f6b52; --accent-soft: #dcebe3; --warn: #8a5a00; --warn-soft: #f6ead2; --done: #1f6b52;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101614; --panel: #18201d; --line: #2a3631; --ink: #e2ebe6; --muted: #93a39b;
+  --accent: #7cc4a5; --accent-soft: #1d3329; --warn: #e3b35c; --warn-soft: #33290f; --done: #7cc4a5; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #101614; --panel: #18201d; --line: #2a3631; --ink: #e2ebe6; --muted: #93a39b;
+  --accent: #7cc4a5; --accent-soft: #1d3329; --warn: #e3b35c; --warn-soft: #33290f; --done: #7cc4a5; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--f-body); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 28px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(28px, 5vw, 38px); letter-spacing: -0.01em; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+p { margin: 0; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+header { display: grid; gap: 14px; }
+.lede { color: var(--muted); max-width: 62ch; }
+.bilan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.bilan > div { background: var(--panel); padding: 14px 16px; display: grid; gap: 2px; min-width: 0; }
+.bilan b { font: 600 clamp(20px, 5vw, 26px)/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.bilan span { font-size: 13px; color: var(--muted); }
+.suivant { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; }
+.suivant p { flex: 1 1 260px; min-width: 0; }
+.btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: var(--panel); border: 0; border-radius: 8px; padding: 9px 14px; font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.etat { font-size: 13px; color: var(--muted); min-height: 1.3em; }
+.etat.alerte { color: var(--warn); }
+
+section.etape { display: grid; gap: 10px; }
+.mods { display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
+.mod { border-top: 1px solid var(--line); }
+.mod:first-child { border-top: 0; }
+.mod > summary { list-style: none; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; cursor: pointer; }
+.mod > summary::-webkit-details-marker { display: none; }
+.num { font: 600 15px var(--f-mono); color: var(--muted); text-align: center; }
+.titre { min-width: 0; display: grid; gap: 1px; }
+.titre strong { font-weight: 600; }
+.titre small { color: var(--muted); font-size: 13.5px; }
+.pill { font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.pill.en_cours { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.pill.termine { background: var(--accent-soft); border-color: transparent; color: var(--done); }
+.mod.bientot summary { cursor: default; opacity: .62; }
+.corps { padding: 4px 14px 16px 60px; display: grid; gap: 12px; }
+.ligne { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; }
+.champ { display: grid; gap: 4px; }
+.champ label { font-size: 13px; color: var(--muted); }
+select, input[type=number], textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+input[type=number] { width: 110px; font-variant-numeric: tabular-nums; }
+textarea { width: 100%; min-height: 70px; resize: vertical; }
+.duree { font-size: 13px; color: var(--muted); }
+@media (max-width: 560px) { .corps { padding-left: 14px; } .mod > summary { grid-template-columns: 28px 1fr; } .mod > summary .pill { grid-column: 2; justify-self: start; } }
+
+.regle { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; }
+.regle pre { margin: 0; font: 13px/1.55 var(--f-mono); white-space: pre-wrap; background: var(--bg); border-radius: 8px; padding: 12px; overflow-x: auto; }
+footer { color: var(--muted); font-size: 13.5px; display: grid; gap: 4px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h2>Parcours d'apprentissage</h2>
+    <h1>Carnet Data Forêt</h1>
+    <p class="lede">Python et data science appliqués aux inventaires forestiers et au suivi de la faune du bassin du Congo. Note ici ta progression, ton temps et tes blocages : Claude peut les lire quand tu lui demandes d'ajuster le parcours.</p>
+    <div class="bilan" aria-live="polite">
+      <div><b id="b-faits">0 / 7</b><span>modules terminés</span></div>
+      <div><b id="b-temps">0 h 00</b><span>de pratique notée</span></div>
+      <div><b id="b-blocages">0</b><span>blocages signalés</span></div>
+    </div>
+    <div class="suivant"><p id="suivant-texte">Chargement de ta progression…</p><a class="btn" id="suivant-lien" href="#" target="_blank" rel="noopener" hidden>Ouvrir dans Colab</a></div>
+    <p class="etat" id="etat"></p>
+  </header>
+
+  <main id="parcours"></main>
+
+  <section class="regle" aria-labelledby="regle-titre">
+    <h3 id="regle-titre">Règle pour travailler avec une IA</h3>
+    <p class="lede">Colle ce texte au début de chaque conversation avec un assistant, pour qu'il t'aide à comprendre sans faire l'exercice à ta place.</p>
+    <pre id="regle-texte">Je suis débutant en Python et j'apprends en faisant des exercices.
+Règles :
+- Ne me donne jamais le code de la solution, même si je le demande.
+- Quand je montre une erreur, explique ce qu'elle signifie et pose-moi une question qui m'aide à trouver la correction.
+- Si je te montre mon code, dis-moi ce qui ne va pas sans le réécrire.
+- Tu peux m'expliquer un concept avec un exemple qui n'a PAS de rapport avec mon exercice.</pre>
+    <div><button class="btn ghost" type="button" id="copier">Copier le texte</button> <span class="etat" id="copie-etat"></span></div>
+  </section>
+
+  <footer>
+    <p>Les données des exercices sont fictives. N'écris ici aucune donnée réelle du programme (coordonnées de faune, données de patrouille).</p>
+    <p>Fichiers du parcours : <a href="https://github.com/Cas1233128/Cr-ation_page_web/tree/claude/quirky-keller-jhyoi0/data-foret" target="_blank" rel="noopener">dossier data-foret sur GitHub</a></p>
+  </footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const COLAB = "https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/";
+const ETAPES = [
+  { titre: "Les bases du langage", mods: [
+    { id: "m0", n: 0, nom: "Prise en main de Python", desc: "Types, opérateurs, texte, erreurs, conditions, listes, boucles, fonctions", h: "2 h", f: "00_prise_en_main_python.ipynb" },
+    { id: "m1", n: 1, nom: "Bases de Python appliquées", desc: "Surface terrière, classes de diamètre, arbres exploitables", h: "2 à 3 h", f: "01_bases_python.ipynb" } ] },
+  { titre: "Inventaire forestier", mods: [
+    { id: "m2", n: 2, nom: "Nettoyer un inventaire", desc: "pandas, virgules, noms d'essences, doublons, placette en millimètres", h: "3 à 4 h", f: "02_nettoyage_inventaire.ipynb" },
+    { id: "m3", n: 3, nom: "Dendrométrie et carbone", desc: "G, N, imputation des hauteurs, équation de Chave (2014), carbone", h: "3 à 4 h", f: "03_dendrometrie_carbone.ipynb" } ] },
+  { titre: "Suivi de la faune", mods: [
+    { id: "m4", n: 4, nom: "Transects : taux de rencontre", desc: "Fiche du programme, effort, doublons cachés, coordonnées inversées", h: "3 à 4 h", f: "04_transects_taux_rencontre.ipynb" },
+    { id: "m5", n: 5, nom: "Transects : densité et effectif", desc: "Distance sampling des nids de gorille, ESW, bootstrap", h: "3 h", f: "05_transects_densite.ipynb" },
+    { id: "m6", n: 6, nom: "Pièges photo : taux de capture", desc: "Export Camelot, effort réel, événements indépendants, RAI", h: "3 h", f: "06_pieges_photo_taux_capture.ipynb" },
+    { id: "m7", n: 7, nom: "Pièges photo : activité et occupation", desc: "Activité sur 24 h, chevauchement, occupation", h: "3 h", f: null },
+    { id: "m8", n: 8, nom: "Expliquer les variations", desc: "Corrélations, tests, GLM de Poisson et binomial négatif", h: "3 à 4 h", f: null } ] },
+  { titre: "Projets", mods: [
+    { id: "m9", n: 9, nom: "Perte de couvert forestier", desc: "Données satellitaires, analyse spatiale", h: "4 h", f: null },
+    { id: "m10", n: 10, nom: "Ton application", desc: "Assembler tes calculs dans une application Streamlit que tu construis toi-même", h: "projet", f: null, perso: true } ] }
+];
+const TOUS = ETAPES.flatMap(e => e.mods);
+const DISPO = TOUS.filter(m => m.f);
+const LIB = { a_faire: "À faire", en_cours: "En cours", termine: "Terminé" };
+const etat = {}; // id -> {statut, minutes, blocage, notes}
+let db = null, mode = "chargement";
+const $ = (s) => document.querySelector(s);
+const el = (tag, props = {}, ...kids) => { const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) { if (k === "text") n.textContent = v; else if (k === "class") n.className = v; else if (v !== false && v != null) n.setAttribute(k, v === true ? "" : v); }
+  for (const c of kids.flat()) if (c != null) n.append(c); return n; };
+const get = (id) => etat[id] || { statut: "a_faire", minutes: 0, blocage: "", notes: "" };
+
+/* ---------- Enregistrement : une écriture à la fois par module, après une pause de saisie ---------- */
+const enAttente = {}, enCours = {}, minuteurs = {};
+function planifier(id) {
+  clearTimeout(minuteurs[id]);
+  minuteurs[id] = setTimeout(() => ecrire(id), 700);
+}
+async function ecrire(id) {
+  if (enCours[id]) { enAttente[id] = true; return; }
+  enCours[id] = true;
+  const d = { ...get(id), maj: new Date().toISOString() };
+  try {
+    if (db) await db.collection("progression").doc(id).set(d);
+    else { try { localStorage.setItem("dataforet." + id, JSON.stringify(d)); } catch {} }
+    afficherEtat(db ? "Enregistré." : "Enregistré sur cet appareil seulement.");
+  } catch (e) {
+    afficherEtat(e && e.code === "invalid_argument" ? "Tu peux consulter ce carnet, mais pas le modifier." : "Échec de l'enregistrement. Vérifie ta connexion, puis modifie à nouveau le champ.", true);
+  } finally {
+    enCours[id] = false;
+    if (enAttente[id]) { enAttente[id] = false; ecrire(id); }
+  }
+}
+function afficherEtat(t, alerte = false) { const e = $("#etat"); e.textContent = t; e.classList.toggle("alerte", alerte); }
+
+/* ---------- Rendu ---------- */
+function heures(min) { const h = Math.floor(min / 60), m = Math.round(min % 60); return `${h} h ${String(m).padStart(2, "0")}`; }
+function bilan() {
+  $("#b-faits").textContent = `${DISPO.filter(m => get(m.id).statut === "termine").length} / ${DISPO.length}`;
+  $("#b-temps").textContent = heures(TOUS.reduce((s, m) => s + (Number(get(m.id).minutes) || 0), 0));
+  $("#b-blocages").textContent = String(TOUS.filter(m => (get(m.id).blocage || "").trim()).length);
+  const prochain = DISPO.find(m => get(m.id).statut === "en_cours") || DISPO.find(m => get(m.id).statut !== "termine");
+  const lien = $("#suivant-lien");
+  if (mode === "chargement") return;
+  if (prochain) {
+    $("#suivant-texte").textContent = `${get(prochain.id).statut === "en_cours" ? "Reprendre" : "Prochaine étape"} : module ${prochain.n} · ${prochain.nom} (${prochain.h}).`;
+    lien.href = COLAB + prochain.f; lien.hidden = false;
+  } else { $("#suivant-texte").textContent = "Tous les modules disponibles sont terminés. Demande à Claude les suivants."; lien.hidden = true; }
+}
+function rendre() {
+  const racine = $("#parcours"); const ouverts = new Set([...racine.querySelectorAll("details[open]")].map(d => d.dataset.id));
+  racine.textContent = "";
+  for (const etape of ETAPES) {
+    const liste = el("div", { class: "mods" });
+    for (const m of etape.mods) {
+      const s = get(m.id);
+      const pill = m.f || m.perso ? el("span", { class: "pill " + s.statut, text: LIB[s.statut] }) : el("span", { class: "pill", text: "À venir" });
+      const resume = el("summary", {}, el("span", { class: "num", text: String(m.n) }), el("span", { class: "titre" }, el("strong", { text: m.nom }), el("small", { text: m.desc })), pill);
+      const det = el("details", { class: "mod" + (m.f || m.perso ? "" : " bientot"), "data-id": m.id });
+      if (!m.f && !m.perso) { resume.setAttribute("tabindex", "-1"); det.addEventListener("toggle", () => { if (det.open) det.open = false; }); }
+      det.append(resume);
+      if (m.f || m.perso) {
+        const statut = el("select", { id: "statut-" + m.id }, Object.entries(LIB).map(([k, v]) => { const o = el("option", { value: k, text: v }); if (k === s.statut) o.selected = true; return o; }));
+        const minutes = el("input", { type: "number", id: "min-" + m.id, min: "0", step: "5", inputmode: "numeric", value: String(s.minutes || 0) });
+        const blocage = el("textarea", { id: "bloc-" + m.id, placeholder: "Exercice, message d'erreur, notion pas claire…" }); blocage.value = s.blocage || "";
+        const notes = el("textarea", { id: "notes-" + m.id, placeholder: "Réponses aux questions ouvertes, idées pour ton travail…" }); notes.value = s.notes || "";
+        const maj = (champ, val) => { etat[m.id] = { ...get(m.id), [champ]: val }; bilan(); planifier(m.id); };
+        statut.addEventListener("change", () => { maj("statut", statut.value); rendre(); });
+        minutes.addEventListener("input", () => maj("minutes", Math.max(0, Number(minutes.value) || 0)));
+        blocage.addEventListener("input", () => maj("blocage", blocage.value));
+        notes.addEventListener("input", () => maj("notes", notes.value));
+        det.append(el("div", { class: "corps" },
+          el("div", { class: "ligne" },
+            el("div", { class: "champ" }, el("label", { for: "statut-" + m.id, text: "Statut" }), statut),
+            el("div", { class: "champ" }, el("label", { for: "min-" + m.id, text: "Minutes passées" }), minutes),
+            m.f ? el("a", { class: "btn ghost", href: COLAB + m.f, target: "_blank", rel: "noopener", text: "Ouvrir dans Colab" }) : null,
+            el("span", { class: "duree", text: "Durée indicative : " + m.h })),
+          el("div", { class: "champ" }, el("label", { for: "bloc-" + m.id, text: "Où as-tu bloqué ?" }), blocage),
+          el("div", { class: "champ" }, el("label", { for: "notes-" + m.id, text: "Notes" }), notes)));
+        if (ouverts.has(m.id)) det.open = true;
+      }
+      liste.append(det);
+    }
+    racine.append(el("section", { class: "etape" }, el("h2", { text: etape.titre }), liste));
+  }
+  bilan();
+}
+
+/* ---------- Copier la règle ---------- */
+$("#copier").addEventListener("click", () => {
+  const t = $("#regle-texte").textContent;
+  const ok = () => { $("#copie-etat").textContent = "Copié."; };
+  const repli = () => { const r = document.createRange(); r.selectNodeContents($("#regle-texte")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("#copie-etat").textContent = "Texte sélectionné : copie-le avec Ctrl + C."; };
+  try { navigator.clipboard.writeText(t).then(ok, repli); } catch { repli(); }
+});
+
+/* ---------- Démarrage ---------- */
+rendre();
+function chargerLocal() {
+  for (const m of TOUS) { try { const v = localStorage.getItem("dataforet." + m.id); if (v) etat[m.id] = JSON.parse(v); } catch {} }
+  mode = "local"; rendre();
+  afficherEtat("Mode hors ligne : ta progression est enregistrée sur cet appareil seulement.", true);
+}
+(async () => {
+  let base = null;
+  try { base = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch { base = null; }
+  if (!base) { chargerLocal(); return; }
+  db = base;
+  const delai = setTimeout(() => afficherEtat("Ta progression ne répond pas encore. Les changements seront enregistrés dès que la connexion revient.", true), 10000);
+  db.collection("progression").onSnapshot((snap) => {
+    let change = false;
+    for (const d of snap.docs) {
+      if (enCours[d.id] || minuteurs[d.id] && document.activeElement && document.activeElement.id && document.activeElement.id.endsWith("-" + d.id)) continue;
+      const v = d.data(); if (!v) continue;
+      etat[d.id] = { statut: LIB[v.statut] ? v.statut : "a_faire", minutes: Number(v.minutes) || 0, blocage: String(v.blocage || ""), notes: String(v.notes || "") };
+      change = true;
+    }
+    if (!snap.metadata.fromCache) { clearTimeout(delai); if (mode !== "en_ligne") afficherEtat(""); }
+    const premier = mode === "chargement"; mode = "en_ligne";
+    if (premier || (change && !document.activeElement?.closest?.(".corps"))) rendre(); else bilan();
+  }, (e) => { clearTimeout(delai); db = null; chargerLocal(); });
+})();
+})();
+</script>
