@@ -187,7 +187,7 @@ table.hosts th { color: var(--muted); font-weight: 500; }
 <div id="desktop" hidden>
   <header id="topbar">
     <span class="brand">Socle</span>
-    <span class="chip hide-sm" id="sec-chip" title="État de sécurité"><span class="dot" id="sec-dot"></span><span id="sec-label">Système protégé</span></span>
+    <span class="chip hide-sm" id="sec-chip" role="button" tabindex="0" title="Ouvrir le centre de sécurité"><span class="dot" id="sec-dot"></span><span id="sec-label">Système protégé</span></span>
     <span class="spacer"></span>
     <span class="chip" id="mode-chip" role="button" tabindex="0" title="Changer de mode">Mode : <b id="mode-label">Guidé</b></span>
     <span id="clock"></span>
@@ -198,10 +198,10 @@ table.hosts th { color: var(--muted); font-weight: 500; }
 
 <div id="toasts" aria-live="polite"></div>
 
-<div id="elev" hidden>
+<div id="elev" role="dialog" aria-modal="true" aria-labelledby="elev-title" hidden>
   <form class="login-card" id="elev-form">
     <div class="eyebrow" style="color:var(--warn)">Demande d'élévation</div>
-    <h1 style="font-size:18px">Droits administrateur</h1>
+    <h1 id="elev-title" style="font-size:18px">Droits administrateur</h1>
     <p id="elev-reason"></p>
     <div class="field"><label for="elev-pass">Votre mot de passe</label><input id="elev-pass" type="password"></div>
     <div class="row"><button class="btn" type="submit">Autoriser une fois</button><button class="btn ghost" type="button" id="elev-cancel">Refuser</button></div>
@@ -224,6 +224,7 @@ const el = (tag, props = {}, ...kids) => {
   for (const c of kids.flat()) if (c != null) n.append(c);
   return n;
 };
+const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const store = {
   get(k, d) { try { const v = localStorage.getItem("socle." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("socle." + k, JSON.stringify(v)); } catch {} }
@@ -273,7 +274,7 @@ function refreshTopbar() {
 }
 
 /* ================= Système de fichiers virtuel ================= */
-const FS = { type: "d", ro: false, c: {
+const FS = { type: "d", ro: true, c: {
   home: { type: "d", c: { dev: { type: "d", c: {
     "LISEZ-MOI.md": { type: "f", v: "# Bienvenue dans Socle\n\nTon dossier personnel est le seul endroit où tu écris par défaut.\nLe système (/usr, /etc) est en lecture seule : une mise à jour remplace l'image\nentière, et tu peux revenir à la précédente si quelque chose casse.\n\nTape `aide` dans le Terminal pour commencer." },
     projets: { type: "d", c: {
@@ -287,7 +288,7 @@ const FS = { type: "d", ro: false, c: {
     "hostname": { type: "f", v: "socle-poste\n" }
   } },
   usr: { type: "d", ro: true, c: { bin: { type: "d", c: { "sh": { type: "f", v: "(binaire)" }, "python3": { type: "f", v: "(binaire)" }, "git": { type: "f", v: "(binaire)" } } } } },
-  lab: { type: "d", ro: true, c: { logs: { type: "d", c: { "auth.log": { type: "f", v: "" } } }, "PERIMETRE.txt": { type: "f", v: "Réseau du labo : 10.13.37.0/24 (machines virtuelles isolées).\nToute action hors de ce périmètre est bloquée par le système.\n" } } }
+  lab: { type: "d", ro: "always", c: { logs: { type: "d", c: { "auth.log": { type: "f", v: "" } } }, "PERIMETRE.txt": { type: "f", v: "Réseau du labo : 10.13.37.0/24 (machines virtuelles isolées).\nToute action hors de ce périmètre est bloquée par le système.\n" } } }
 } };
 
 // Journal d'authentification du labo (généré, contient une attaque par force brute)
@@ -311,10 +312,13 @@ function resolve(path) {
     if (!p || p === ".") continue;
     if (p === "..") parts.pop(); else parts.push(p);
   }
-  let node = FS, ro = false;
+  // lecture seule : "always" (labo) ne se lève jamais ; true (image système) se lève en mode développement système
+  const isRo = (n) => n.ro === "always" || (!!n.ro && S.immutable);
+  let node = FS, ro = isRo(FS);
   for (const p of parts) {
-    if (!node || node.type !== "d" || !Object.prototype.hasOwnProperty.call(node.c, p)) return { parts, node: null, ro };
-    node = node.c[p]; ro = ro || !!node.ro;
+    if (!node || node.type !== "d" || !own(node.c, p)) return { parts, node: null, ro };
+    node = node.c[p];
+    ro = node === FS.c.home.c.dev ? false : (ro || isRo(node)); // seul /home/dev est modifiable par défaut
   }
   return { parts, node, ro };
 }
@@ -399,19 +403,27 @@ function toast(msg, kind = "") {
 }
 
 /* ================= Élévation (sudo) ================= */
-let elevResolve = null;
+let elevResolve = null, elevPrevFocus = null;
+function closeElevation(result) {
+  $("#elev").hidden = true; $("#desktop").inert = false;
+  const r = elevResolve; elevResolve = null; r?.(result);
+  elevPrevFocus?.focus?.(); elevPrevFocus = null;
+}
 function askElevation(reason) {
+  if (elevResolve) closeElevation(false); // une seule demande à la fois : la précédente est refusée
+  elevPrevFocus = document.activeElement;
   return new Promise((res) => {
     elevResolve = res; $("#elev-reason").textContent = reason; $("#elev-pass").value = "";
-    $("#elev").hidden = false; setTimeout(() => $("#elev-pass").focus(), 30);
+    $("#desktop").inert = true; $("#elev").hidden = false; setTimeout(() => $("#elev-pass").focus(), 30);
   });
 }
+$("#elev").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); closeElevation(false); } });
 $("#elev-form").addEventListener("submit", (e) => {
   e.preventDefault(); const ok = $("#elev-pass").value.length >= 4;
   if (!ok) { toast("Mot de passe trop court : 4 caractères minimum dans l'aperçu.", "danger"); return; }
-  $("#elev").hidden = true; elevResolve?.(true); elevResolve = null;
+  closeElevation(true);
 });
-$("#elev-cancel").addEventListener("click", () => { $("#elev").hidden = true; elevResolve?.(false); elevResolve = null; });
+$("#elev-cancel").addEventListener("click", () => closeElevation(false));
 
 /* ================= Applications ================= */
 const RENDER = {};
@@ -494,11 +506,11 @@ RENDER.terminal = (body, w) => {
   async function exec(line, elevated = false) {
     const args = line.trim().split(/\s+/).filter(Boolean); if (!args.length) return;
     let cmd = args.shift().toLowerCase();
-    if (ALIASES[cmd]) { if (S.mode === "guide" && !["help", "clear"].includes(cmd)) guide(`« ${cmd} » vient d'un autre système. Ici, l'équivalent est « ${ALIASES[cmd]} ».`); cmd = ALIASES[cmd]; }
+    if (own(ALIASES, cmd)) { if (S.mode === "guide" && !["help", "clear"].includes(cmd)) guide(`« ${cmd} » vient d'un autre système. Ici, l'équivalent est « ${ALIASES[cmd]} ».`); cmd = ALIASES[cmd]; }
     const a0 = args[0];
     switch (cmd) {
       case "aide": HELP.forEach(([c, d]) => print(c.padEnd(24) + d)); break;
-      case "explique": print(a0 ? (EXPLAIN[a0.toLowerCase()] || `Pas encore d'explication pour « ${a0} ».`) : "Usage : explique <commande>", a0 && EXPLAIN[a0.toLowerCase()] ? "" : "w"); break;
+      case "explique": { const k = (a0 || "").toLowerCase(); const has = !!a0 && own(EXPLAIN, k); print(a0 ? (has ? EXPLAIN[k] : `Pas encore d'explication pour « ${a0} ».`) : "Usage : explique <commande>", has ? "" : "w"); break; }
       case "pwd": print(pathStr(cwd)); break;
       case "whoami": print(elevated ? "root (élévation temporaire)" : S.user); break;
       case "date": print(new Date().toLocaleString("fr-FR")); break;
@@ -528,15 +540,18 @@ RENDER.terminal = (body, w) => {
         hits.slice(0, 40).forEach(l => print(l)); if (hits.length > 40) print(`… ${hits.length - 40} lignes de plus`, "m");
         guide(`${hits.length} ligne(s) trouvée(s). Astuce : regarde quelle IP revient le plus souvent.`); break; }
       case "touch": case "mkdir": {
-        if (!a0 || !/^[\w.\-]{1,40}$/.test(a0)) { print(`Usage : ${cmd} <nom> (lettres, chiffres, . _ - uniquement)`, "w"); break; }
+        if (!a0 || !/^[\w.\-]{1,40}$/.test(a0) || a0 === "__proto__") { print(`Usage : ${cmd} <nom> (lettres, chiffres, . _ - uniquement)`, "w"); break; }
         const dir = resolve("."); if (dir.ro) { print(`${cmd} : refusé, ${pathStr(cwd)} est en lecture seule (image système).`, "e"); guide("Travaille dans ton dossier personnel : cd ~"); break; }
-        if (dir.node.c[a0]) { print(`${cmd} : « ${a0} » existe déjà`, "w"); break; }
+        if (own(dir.node.c, a0)) { print(`${cmd} : « ${a0} » existe déjà`, "w"); break; }
         dir.node.c[a0] = cmd === "mkdir" ? { type: "d", c: {} } : { type: "f", v: "" }; print(`créé : ${a0}`, "p"); refreshAll(); break; }
       case "rm": {
         if (args.includes("-rf") && (args.includes("/") || args.includes("/*"))) { print("rm : refusé. Le système est une image en lecture seule ; cette commande ne peut rien détruire ici.", "e"); audit("tentative rm -rf / bloquée"); break; }
         const name = args.filter(x => !x.startsWith("-"))[0]; if (!name) { print("Usage : rm <nom>", "w"); break; }
         const r = resolve(name); if (!r.node) { print(`rm : « ${name} » introuvable`, "e"); break; }
-        if (r.ro) { print(`rm : refusé, « ${name} » appartient à l'image système.`, "e"); break; }
+        if (r.ro || r.parts.length === 0) { print(`rm : refusé, « ${name} » appartient à l'image système.`, "e"); break; }
+        if (r.node.type === "d" && !args.some(x => /^-\w*r/.test(x))) { print(`rm : « ${name} » est un dossier. Utilise rm -r ${name}`, "e"); break; }
+        const tgt = r.parts.join("/"), isPrefix = (full) => full === tgt || full.startsWith(tgt + "/");
+        if (isPrefix("home/dev") || isPrefix(cwd.join("/"))) { print("rm : refusé, ce dossier contient ton dossier personnel ou le dossier courant.", "e"); break; }
         const parent = resolve(pathStr(r.parts.slice(0, -1)));
         delete parent.node.c[r.parts[r.parts.length - 1]]; print(`« ${name} » déplacé dans la corbeille (récupérable 30 jours).`, "p"); refreshAll(); break; }
       case "run": {
@@ -572,7 +587,7 @@ RENDER.terminal = (body, w) => {
         busy = true; print("Scan du périmètre labo…", "m"); await wait(600); LAB_HOSTS.forEach(h => print(`${h.ip.padEnd(13)} ${h.name.padEnd(10)} ports : ${h.ports}`)); busy = false; audit(`scan labo ${a0}`); break; }
       case "sudo": {
         if (!args.length) { print("Usage : sudo <commande>", "w"); break; }
-        busy = true; const ok = await askElevation(`La commande « ${args.join(" ")} » demande les droits administrateur.`); busy = false;
+        busy = true; let ok = false; try { ok = await askElevation(`La commande « ${args.join(" ")} » demande les droits administrateur.`); } finally { busy = false; }
         if (!ok) { print("sudo : élévation refusée.", "e"); audit(`sudo refusé : ${args.join(" ")}`); break; }
         audit(`sudo accordé : ${args.join(" ")}`); await exec(args.join(" "), true); break; }
       default: {
@@ -582,7 +597,11 @@ RENDER.terminal = (body, w) => {
       }
     }
   }
+  let escT = false;
   input.addEventListener("keydown", async (e) => {
+    if (e.key === "Escape") { escT = true; print("(Échap : Tab quitte maintenant le terminal)", "m"); return; }
+    if (e.key === "Tab" && (e.shiftKey || escT)) { escT = false; return; }
+    if (e.key !== "Tab") escT = false;
     if (e.key === "Enter") {
       if (busy) return; const v = input.value; input.value = "";
       print(promptEl.textContent + " " + v, "p"); if (v.trim()) { hist.push(v); hi = hist.length; }
@@ -616,7 +635,7 @@ RENDER.fichiers = (body) => {
   };
   const draw = () => {
     nav.textContent = ""; walk(FS, [], 0); view.textContent = "";
-    const r = resolve(sel); if (!r.node) { sel = "/home/dev"; return draw(); }
+    const r = resolve(sel); if (!r.node) { if (sel === "/home/dev") return; sel = "/home/dev"; return draw(); }
     view.append(el("div", { class: "row" }, el("code", { text: sel }), el("span", { class: "chip" }, el("span", { class: "dot" + (r.ro ? " warn" : "") }), el("span", { text: r.ro ? "Lecture seule (système)" : "Modifiable" }))));
     if (r.node.type === "d") view.append(el("p", { class: "hint", style: "margin-top:10px", text: Object.keys(r.node.c).length + " élément(s)" }));
     else { view.append(el("pre", { text: r.node.v || "(fichier vide)" }));
@@ -635,7 +654,8 @@ RENDER.editeur = (body) => {
     const r = resolve(EDIT.path); if (!r.node || r.ro) { status.textContent = "Impossible : fichier système en lecture seule."; return; }
     r.node.v = ta.value; status.textContent = "Enregistré à " + new Date().toLocaleTimeString("fr-FR"); audit("fichier modifié : " + EDIT.path); } });
   body.append(el("div", { class: "col" }, el("div", { class: "row", style: "padding:8px 12px;border-bottom:1px solid var(--line)" }, name, el("span", { style: "flex:1" }), status, save), ta));
-  ta.addEventListener("keydown", (e) => { if (e.key === "Tab") { e.preventDefault(); const s = ta.selectionStart; ta.setRangeText("    ", s, ta.selectionEnd, "end"); } if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save.click(); } });
+  let escE = false;
+  ta.addEventListener("keydown", (e) => { if (e.key === "Escape") { escE = true; return; } if (e.key === "Tab" && (e.shiftKey || escE)) { escE = false; return; } escE = false; if (e.key === "Tab") { e.preventDefault(); const s = ta.selectionStart; ta.setRangeText("    ", s, ta.selectionEnd, "end"); } if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save.click(); } });
   EDIT.reload = () => { const r = resolve(EDIT.path); name.textContent = EDIT.path; ta.value = r.node ? r.node.v : ""; ta.readOnly = !r.node || r.ro; status.textContent = "Bac à sable sans réseau · Ctrl+S pour enregistrer"; };
   EDIT.reload();
 };
@@ -681,7 +701,7 @@ RENDER.securite = (body) => {
       p.append(el("p", { text: "Les mises à jour remplacent l'image système en entier, au redémarrage. Si la nouvelle image ne démarre pas, Socle revient seul à la précédente." }),
         el("div", { class: "row" }, el("span", { class: "chip", text: "Image active : " + S.version }),
           el("button", { class: "btn small", type: "button", text: "Rechercher une mise à jour", onclick: async () => { const ok = await askElevation("Installer une nouvelle image système."); if (!ok) return; update(); draw(); } }),
-          el("button", { class: "btn ghost small", type: "button", text: "Revenir à l'image précédente", disabled: S.snapshots.length < 2, onclick: async () => { const ok = await askElevation("Redémarrer sur l'image système précédente."); if (ok && rollback()) { toast("Retour à " + S.version + " effectué."); draw(); } } })));
+          el("button", { class: "btn ghost small", type: "button", text: "Revenir à l'image précédente", disabled: S.snapshots.findIndex(s => s.id === S.version) <= 0, onclick: async () => { const ok = await askElevation("Redémarrer sur l'image système précédente."); if (ok && rollback()) { toast("Retour à " + S.version + " effectué."); draw(); } } })));
       p.append(el("div", { class: "list" }, S.snapshots.slice().reverse().map(s => el("div", {}, el("code", { text: s.id }), el("div", { class: "grow" }, el("div", { text: s.note }), el("div", { class: "sub", text: s.date })), s.id === S.version ? el("span", { class: "chip", text: "active" }) : null))));
       p.append(el("div", { class: "list" }, el("div", {}, el("div", { class: "grow" }, el("div", { text: "Mode développement système" }), el("div", { class: "sub", text: "Rend /usr modifiable jusqu'au prochain redémarrage. Réservé à qui développe Socle lui-même." })),
         sw(!S.immutable, async (v) => { if (v) { const ok = await askElevation("Rendre l'image système modifiable (désactive une protection majeure)."); if (!ok) { draw(); return; } } S.immutable = !v; audit("système " + (v ? "modifiable" : "lecture seule")); draw(); }, "Mode développement système"))));
@@ -691,9 +711,9 @@ RENDER.securite = (body) => {
         el("div", { class: "logbox", text: S.audit.join("\n") || "(vide)" }));
     }
   };
-  draw(); refreshers.add(() => { if (tab === "journal" || tab === "apercu") draw(); });
+  draw(); refreshers.add(() => { if (tab !== "apps" && tab !== "reseau") draw(); });
 };
-function update() { const [a, b, c] = S.version.split(".").map(Number); const v = `${a}.${b}.${c + 1}`; S.snapshots.push({ id: v, date: new Date().toISOString().slice(0, 10), note: "Correctifs de sécurité (aperçu)" }); if (S.snapshots.length > 3) S.snapshots.shift(); S.version = v; audit("mise à jour vers " + v); toast("Image " + v + " installée. Elle sera active au prochain redémarrage."); }
+function update() { const i = S.snapshots.findIndex(s => s.id === S.version); S.snapshots.splice(i + 1); const [a, b, c] = S.snapshots[S.snapshots.length - 1].id.split(".").map(Number); const v = `${a}.${b}.${c + 1}`; S.snapshots.push({ id: v, date: new Date().toISOString().slice(0, 10), note: "Correctifs de sécurité (aperçu)" }); if (S.snapshots.length > 3) S.snapshots.shift(); S.version = v; audit("mise à jour vers " + v); toast("Image " + v + " installée et active (redémarrage simulé)."); }
 function rollback() { const i = S.snapshots.findIndex(s => s.id === S.version); if (i <= 0) return false; S.version = S.snapshots[i - 1].id; audit("retour à l'image " + S.version); return true; }
 
 /* ---- Labo Cyber ---- */
@@ -765,6 +785,7 @@ const toggleMode = () => { setMode(S.mode === "guide" ? "expert" : "guide"); toa
 $("#mode-chip").addEventListener("click", toggleMode);
 $("#mode-chip").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleMode(); } });
 $("#sec-chip").addEventListener("click", () => openApp("securite"));
+$("#sec-chip").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openApp("securite"); } });
 boot();
 })();
 </script>
