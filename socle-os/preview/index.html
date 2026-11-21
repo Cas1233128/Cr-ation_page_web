@@ -1,0 +1,770 @@
+<title>Socle OS Preview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout : bureau plein écran — barre d'état en haut, dock en bas, fenêtres flottantes (plein écran sur téléphone).
+   Thème : "socle" = roche-mère. Basalte froid + lichen. Sombre par défaut, clair disponible. */
+:root {
+  --bg: #11151a; --surface: #1a2026; --surface-2: #232b32; --line: #2f3941;
+  --fg: #e4ebe7; --muted: #8b9a94; --accent: #8fc4a4; --accent-ink: #0f1d16;
+  --ok: #7cc79a; --warn: #e0b25c; --danger: #e5736b;
+  --term-bg: #0b0e11; --term-fg: #d6e2dc;
+  --strata-a: #161c21; --strata-b: #131820;
+  --shadow: 0 18px 50px rgba(0,0,0,.45);
+  --f-display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #d9e0dc; --surface: #f5f7f6; --surface-2: #e7ece9; --line: #c8d1cc;
+  --fg: #18221e; --muted: #56655e; --accent: #2e7651; --accent-ink: #ffffff;
+  --ok: #2e7f4f; --warn: #94660f; --danger: #b2433a;
+  --term-bg: #10161a; --term-fg: #d6e2dc;
+  --strata-a: #d3dbd6; --strata-b: #cdd6d1;
+  --shadow: 0 18px 40px rgba(30,45,38,.22); color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #d9e0dc; --surface: #f5f7f6; --surface-2: #e7ece9; --line: #c8d1cc;
+  --fg: #18221e; --muted: #56655e; --accent: #2e7651; --accent-ink: #ffffff;
+  --ok: #2e7f4f; --warn: #94660f; --danger: #b2433a;
+  --term-bg: #10161a; --term-fg: #d6e2dc;
+  --strata-a: #d3dbd6; --strata-b: #cdd6d1;
+  --shadow: 0 18px 40px rgba(30,45,38,.22); color-scheme: light; }
+
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; overflow: hidden; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- Démarrage ---------- */
+#boot { position: fixed; inset: 0; z-index: 100; background: var(--term-bg); color: var(--term-fg);
+  font-family: var(--f-mono); font-size: 13px; padding: 24px max(16px, env(safe-area-inset-left, 0px)); overflow: hidden; }
+#boot .ok { color: #7cc79a; } #boot .skip { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  background: transparent; border: 1px solid #2f3941; color: #8b9a94; padding: 6px 12px; border-radius: 6px; }
+#login { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: var(--bg);
+  background-image: repeating-linear-gradient(176deg, var(--strata-a) 0 22px, var(--strata-b) 22px 47px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.login-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px; width: min(360px, 100%); box-shadow: var(--shadow); display: grid; gap: 14px; }
+.login-card h1 { font-family: var(--f-display); font-size: 22px; margin: 0; }
+.login-card p { margin: 0; color: var(--muted); line-height: 1.5; }
+.field { display: grid; gap: 6px; } .field label { font-size: 12px; color: var(--muted); letter-spacing: .03em; }
+input[type=text], input[type=password] { background: var(--surface-2); border: 1px solid var(--line); color: var(--fg); border-radius: 8px; padding: 10px 12px; font: inherit; width: 100%; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 600; }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 500; }
+.btn.small { padding: 6px 10px; font-size: 12.5px; }
+.hint { font-size: 12px; color: var(--muted); }
+.err { color: var(--danger); font-size: 12.5px; min-height: 1em; }
+
+/* ---------- Bureau ---------- */
+#desktop { position: fixed; inset: 0; display: flex; flex-direction: column;
+  background-color: var(--bg);
+  background-image: radial-gradient(ellipse at 78% 18%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 55%),
+    repeating-linear-gradient(176deg, var(--strata-a) 0 22px, var(--strata-b) 22px 47px); }
+#topbar { height: calc(34px + env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px));
+  display: flex; align-items: center; gap: 12px; background: color-mix(in srgb, var(--surface) 88%, transparent); border-bottom: 1px solid var(--line); backdrop-filter: blur(8px); flex: none; z-index: 50; }
+#topbar .brand { font-family: var(--f-display); font-weight: 700; letter-spacing: .02em; }
+#topbar .spacer { flex: 1; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 12px; background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.dot.warn { background: var(--warn); } .dot.danger { background: var(--danger); }
+#clock { font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--muted); }
+#mode-chip { cursor: pointer; }
+#workspace { position: relative; flex: 1; overflow: hidden; }
+#dock { flex: none; display: flex; justify-content: center; padding: 8px max(12px, env(safe-area-inset-left, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 50; }
+#dock .tray { display: flex; gap: 6px; padding: 6px; background: color-mix(in srgb, var(--surface) 90%, transparent); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow-x: auto; max-width: 100%; }
+.dock-btn { position: relative; display: grid; place-items: center; gap: 2px; width: 64px; padding: 6px 4px; border-radius: 10px; background: transparent; border: 0; font-size: 10.5px; color: var(--muted); flex: none; }
+.dock-btn:hover { background: var(--surface-2); color: var(--fg); }
+.dock-btn svg { width: 24px; height: 24px; stroke: var(--fg); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.dock-btn.running::after { content: ""; position: absolute; bottom: 1px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+
+/* ---------- Fenêtres ---------- */
+.win { position: absolute; display: flex; flex-direction: column; min-width: 300px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; resize: both; }
+.win.focused { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.win .bar { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; background: var(--surface-2); border-bottom: 1px solid var(--line); cursor: grab; user-select: none; touch-action: none; flex: none; }
+.win .bar h2 { margin: 0; font-family: var(--f-display); font-size: 13px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win .sandbox-tag { font-size: 10.5px; font-family: var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+.win .ctl { width: 26px; height: 22px; border-radius: 6px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; }
+.win .ctl:hover { background: var(--line); color: var(--fg); }
+.win .ctl.close:hover { background: var(--danger); color: #fff; }
+.win .body { flex: 1; overflow: auto; min-height: 0; }
+.win.hidden-win { display: none; }
+@media (max-width: 720px) {
+  .win { left: 6px !important; top: 6px !important; width: calc(100% - 12px) !important; height: calc(100% - 12px) !important; min-width: 0; resize: none; }
+  .dock-btn { width: 56px; } #topbar .hide-sm { display: none; }
+}
+
+.pad { padding: 18px; display: grid; gap: 16px; align-content: start; }
+.pad h3 { margin: 0; font-family: var(--f-display); font-size: 15px; text-wrap: balance; }
+.pad p { margin: 0; line-height: 1.55; color: var(--muted); max-width: 65ch; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--accent); font-weight: 600; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.list { display: grid; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.list > div { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-top: 1px solid var(--line); min-width: 0; }
+.list > div:first-child { border-top: 0; }
+.list .grow { flex: 1; min-width: 0; } .list .sub { font-size: 12px; color: var(--muted); }
+kbd, code { font-family: var(--f-mono); font-size: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+/* Interrupteur */
+.switch { position: relative; width: 38px; height: 22px; flex: none; }
+.switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; background: var(--line); border-radius: 999px; transition: background .15s; pointer-events: none; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--fg); transition: transform .15s; }
+.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span::after { transform: translateX(16px); background: var(--accent-ink); }
+.switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Onglets */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); padding: 0 12px; overflow-x: auto; flex: none; }
+.tabs button { background: transparent; border: 0; padding: 10px 10px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+.tabs button[aria-selected=true] { color: var(--fg); border-bottom-color: var(--accent); }
+.col { display: flex; flex-direction: column; height: 100%; }
+.col > .scroll { flex: 1; overflow: auto; min-height: 0; }
+
+/* Terminal */
+.term { background: var(--term-bg); color: var(--term-fg); font-family: var(--f-mono); font-size: 13px; line-height: 1.5; height: 100%; padding: 12px 14px; overflow: auto; cursor: text; }
+.term .line { white-space: pre-wrap; word-break: break-word; }
+.term .p { color: #8fc4a4; } .term .e { color: #e5736b; } .term .w { color: #e0b25c; } .term .m { color: #7f8f89; } .term .i { color: #9fb8e8; }
+.term .inrow { display: flex; gap: 8px; }
+.term input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: inherit; font: inherit; padding: 0; caret-color: #8fc4a4; }
+.term .tip { margin-top: 4px; color: #7f8f89; font-size: 12px; }
+
+/* Fichiers */
+.files { display: grid; grid-template-columns: 200px 1fr; height: 100%; }
+.files nav { border-right: 1px solid var(--line); padding: 10px; overflow: auto; font-family: var(--f-mono); font-size: 12.5px; }
+.files nav button { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: 4px 6px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.files nav button:hover, .files nav button.sel { background: var(--surface-2); }
+.files .view { padding: 14px; overflow: auto; min-width: 0; }
+.files pre { font-family: var(--f-mono); font-size: 12.5px; white-space: pre-wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 8px 0 0; overflow-x: auto; }
+@media (max-width: 520px) { .files { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .files nav { border-right: 0; border-bottom: 1px solid var(--line); max-height: 160px; } }
+
+/* Labo */
+.scope { border: 1px dashed var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; color: var(--fg); background: color-mix(in srgb, var(--warn) 8%, transparent); line-height: 1.5; }
+table.hosts { width: 100%; border-collapse: collapse; font-family: var(--f-mono); font-size: 12px; }
+table.hosts th, table.hosts td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.hosts th { color: var(--muted); font-weight: 500; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.logbox { font-family: var(--f-mono); font-size: 11.5px; background: var(--term-bg); color: var(--term-fg); border-radius: 8px; padding: 10px; max-height: 200px; overflow: auto; white-space: pre; }
+
+/* Bienvenue */
+.steps { display: flex; gap: 6px; } .steps i { height: 4px; flex: 1; border-radius: 2px; background: var(--line); }
+.steps i.on { background: var(--accent); }
+.choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.choice button { text-align: left; padding: 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); display: grid; gap: 4px; }
+.choice button[aria-pressed=true] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.choice b { font-family: var(--f-display); font-size: 14px; } .choice span { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+
+/* Notifications */
+#toasts { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); top: calc(44px + env(safe-area-inset-top, 0px)); display: grid; gap: 8px; z-index: 80; width: min(340px, calc(100% - 24px)); }
+.toast { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 12px; box-shadow: var(--shadow); font-size: 13px; line-height: 1.45; }
+.toast.warn { border-left-color: var(--warn); } .toast.danger { border-left-color: var(--danger); }
+
+/* Fenêtre d'élévation (sudo) */
+#elev { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; background: rgba(5,8,10,.6); padding: 16px; }
+#elev .login-card { border-color: var(--warn); }
+</style>
+
+<div id="boot" aria-live="polite"><div id="boot-log"></div><button class="skip" id="skip-boot" type="button">Passer</button></div>
+
+<div id="login" hidden>
+  <form class="login-card" id="login-form" autocomplete="off">
+    <div class="eyebrow">Socle OS 0.1 · aperçu</div>
+    <h1>Bonjour</h1>
+    <p>Session locale de démonstration. Rien n'est envoyé sur un serveur : tout tourne dans ce navigateur.</p>
+    <div class="field"><label for="login-user">Utilisateur</label><input id="login-user" type="text" value="dev" maxlength="24"></div>
+    <div class="field"><label for="login-pass">Mot de passe</label><input id="login-pass" type="password" placeholder="n'importe quoi de 4 caractères ou plus"></div>
+    <div class="err" id="login-err"></div>
+    <button class="btn" type="submit">Ouvrir la session</button>
+    <span class="hint">Dans la vraie version : clé FIDO2 ou mot de passe + déverrouillage du disque chiffré par TPM.</span>
+  </form>
+</div>
+
+<div id="desktop" hidden>
+  <header id="topbar">
+    <span class="brand">Socle</span>
+    <span class="chip hide-sm" id="sec-chip" title="État de sécurité"><span class="dot" id="sec-dot"></span><span id="sec-label">Système protégé</span></span>
+    <span class="spacer"></span>
+    <span class="chip" id="mode-chip" role="button" tabindex="0" title="Changer de mode">Mode : <b id="mode-label">Guidé</b></span>
+    <span id="clock"></span>
+  </header>
+  <main id="workspace"></main>
+  <footer id="dock"><div class="tray" id="tray"></div></footer>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+
+<div id="elev" hidden>
+  <form class="login-card" id="elev-form">
+    <div class="eyebrow" style="color:var(--warn)">Demande d'élévation</div>
+    <h1 style="font-size:18px">Droits administrateur</h1>
+    <p id="elev-reason"></p>
+    <div class="field"><label for="elev-pass">Votre mot de passe</label><input id="elev-pass" type="password"></div>
+    <div class="row"><button class="btn" type="submit">Autoriser une fois</button><button class="btn ghost" type="button" id="elev-cancel">Refuser</button></div>
+    <span class="hint">L'autorisation vaut pour cette seule commande. Elle est inscrite au journal d'audit.</span>
+  </form>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, props = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null) n.append(c);
+  return n;
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("socle." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("socle." + k, JSON.stringify(v)); } catch {} }
+};
+
+/* ================= État système ================= */
+const S = {
+  user: "dev",
+  mode: store.get("mode", "guide"),          // guide | expert
+  theme: store.get("theme", "system"),
+  firewall: { inbound: "deny", outboundLog: true },
+  immutable: true,
+  secureBoot: true,
+  diskEncrypted: true,
+  version: "0.1.3",
+  snapshots: [ { id: "0.1.2", date: "2026-11-14", note: "Noyau 6.18.40" }, { id: "0.1.3", date: "2026-11-20", note: "Noyau 6.18.44, correctifs OpenSSL" } ],
+  perms: {
+    terminal: { label: "Terminal", net: true,  home: true,  cam: false, mic: false, usb: false },
+    editeur:  { label: "Éditeur de code", net: false, home: true, cam: false, mic: false, usb: false },
+    navigateur: { label: "Navigateur", net: true, home: false, cam: false, mic: false, usb: false },
+    visio:    { label: "Visio (tiers)", net: true, home: false, cam: true, mic: true, usb: false },
+    labo:     { label: "Labo Cyber", net: false, home: false, cam: false, mic: false, usb: false }
+  },
+  audit: [],
+  labSolved: false
+};
+const PERM_NAMES = { net: "Réseau", home: "Dossier personnel", cam: "Caméra", mic: "Micro", usb: "USB" };
+function audit(evt) { const t = new Date().toLocaleTimeString("fr-FR"); S.audit.unshift(t + "  " + evt); if (S.audit.length > 60) S.audit.pop(); refreshAll(); }
+
+function applyTheme() {
+  if (S.theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", S.theme);
+}
+applyTheme();
+
+function secState() {
+  const issues = [];
+  if (S.firewall.inbound !== "deny") issues.push("pare-feu entrant ouvert");
+  if (!S.immutable) issues.push("système en écriture");
+  return issues;
+}
+function refreshTopbar() {
+  const iss = secState();
+  $("#sec-dot").className = "dot" + (iss.length ? " warn" : "");
+  $("#sec-label").textContent = iss.length ? "À vérifier : " + iss.join(", ") : "Système protégé";
+  $("#mode-label").textContent = S.mode === "guide" ? "Guidé" : "Expert";
+}
+
+/* ================= Système de fichiers virtuel ================= */
+const FS = { type: "d", ro: false, c: {
+  home: { type: "d", c: { dev: { type: "d", c: {
+    "LISEZ-MOI.md": { type: "f", v: "# Bienvenue dans Socle\n\nTon dossier personnel est le seul endroit où tu écris par défaut.\nLe système (/usr, /etc) est en lecture seule : une mise à jour remplace l'image\nentière, et tu peux revenir à la précédente si quelque chose casse.\n\nTape `aide` dans le Terminal pour commencer." },
+    projets: { type: "d", c: {
+      "bonjour.py": { type: "f", v: "#!/usr/bin/env python3\n# Premier script. Lance-le avec : run projets/bonjour.py\nnom = \"Socle\"\nprint(f\"Bonjour depuis {nom} !\")\n" },
+      "serveur.js": { type: "f", v: "// Serveur minimal. Il tourne dans un bac à sable :\n// il n'a accès qu'au réseau local et à ce dossier.\nconst http = require('http');\nhttp.createServer((q, r) => r.end('ok')).listen(8080);\n" }
+    } },
+    notes: { type: "d", c: { "idees.txt": { type: "f", v: "- apprendre git\n- finir l'exercice du Labo Cyber\n" } } }
+  } } } },
+  etc: { type: "d", ro: true, c: {
+    "socle.conf": { type: "f", v: "[systeme]\nimage = socle-0.1.3\nmises_a_jour = atomiques\nretour_arriere = 3 images conservées\n\n[securite]\npare_feu_entrant = refuser\napps = bac_a_sable_obligatoire\nnoyau = verrouille (lockdown=integrity)\n" },
+    "hostname": { type: "f", v: "socle-poste\n" }
+  } },
+  usr: { type: "d", ro: true, c: { bin: { type: "d", c: { "sh": { type: "f", v: "(binaire)" }, "python3": { type: "f", v: "(binaire)" }, "git": { type: "f", v: "(binaire)" } } } } },
+  lab: { type: "d", ro: true, c: { logs: { type: "d", c: { "auth.log": { type: "f", v: "" } } }, "PERIMETRE.txt": { type: "f", v: "Réseau du labo : 10.13.37.0/24 (machines virtuelles isolées).\nToute action hors de ce périmètre est bloquée par le système.\n" } } }
+} };
+
+// Journal d'authentification du labo (généré, contient une attaque par force brute)
+(function genLog() {
+  const lines = []; const users = ["admin", "root", "test", "oracle", "ubuntu", "postgres"];
+  let s = 7, rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  for (let i = 0; i < 44; i++) {
+    const m = String(10 + Math.floor(i / 6)).padStart(2, "0"), sec = String(Math.floor(rnd() * 60)).padStart(2, "0");
+    if (i % 7 === 3) lines.push(`Nov 21 03:${m}:${sec} srv-web sshd[2211]: Accepted publickey for deploy from 10.13.37.12 port 51${i}2`);
+    else if (i % 11 === 5) lines.push(`Nov 21 03:${m}:${sec} srv-web sshd[2211]: Failed password for alice from 10.13.37.20 port 40${i}1`);
+    else lines.push(`Nov 21 03:${m}:${sec} srv-web sshd[2211]: Failed password for invalid user ${users[i % users.length]} from 10.13.37.66 port 5${String(1000 + i * 37)}`);
+  }
+  FS.c.lab.c.logs.c["auth.log"].v = lines.join("\n") + "\n";
+})();
+
+let cwd = ["home", "dev"];
+function resolve(path) {
+  let parts = path.startsWith("/") ? [] : [...cwd];
+  if (path === "~" || path.startsWith("~/")) { parts = ["home", "dev"]; path = path.slice(1); }
+  for (const p of path.split("/")) {
+    if (!p || p === ".") continue;
+    if (p === "..") parts.pop(); else parts.push(p);
+  }
+  let node = FS, ro = false;
+  for (const p of parts) {
+    if (!node || node.type !== "d" || !Object.prototype.hasOwnProperty.call(node.c, p)) return { parts, node: null, ro };
+    node = node.c[p]; ro = ro || !!node.ro;
+  }
+  return { parts, node, ro };
+}
+const pathStr = (parts) => "/" + parts.join("/");
+const prettyCwd = () => { const p = pathStr(cwd); return p.startsWith("/home/dev") ? "~" + p.slice(9) : p; };
+
+/* ================= Fenêtres ================= */
+const ICONS = {
+  bienvenue: '<path d="M4 20V10l8-6 8 6v10"/><path d="M9 20v-6h6v6"/>',
+  terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M12 15h5"/>',
+  fichiers: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  editeur: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
+  securite: '<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+  labo: '<path d="M9 3h6M10 3v6L5 19a1.5 1.5 0 0 0 1.3 2h11.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/><path d="M7.5 15h9"/>',
+  reglages: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'
+};
+const APPS = [
+  { id: "bienvenue", name: "Bienvenue", w: 560, h: 470, sandbox: "système" },
+  { id: "terminal", name: "Terminal", w: 680, h: 420, sandbox: "bac à sable : terminal" },
+  { id: "fichiers", name: "Fichiers", w: 640, h: 420, sandbox: "système" },
+  { id: "editeur", name: "Éditeur", w: 620, h: 440, sandbox: "bac à sable : sans réseau" },
+  { id: "securite", name: "Sécurité", w: 640, h: 520, sandbox: "système" },
+  { id: "labo", name: "Labo Cyber", w: 680, h: 540, sandbox: "VM isolée · 10.13.37.0/24" },
+  { id: "reglages", name: "Réglages", w: 480, h: 420, sandbox: "système" }
+];
+const wins = {}; let z = 10, cascade = 0;
+
+function buildDock() {
+  const tray = $("#tray"); tray.textContent = "";
+  for (const a of APPS) {
+    const b = el("button", { class: "dock-btn", type: "button", title: a.name, "data-app": a.id, onclick: () => openApp(a.id) });
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("aria-hidden", "true");
+    svg.innerHTML = ICONS[a.id]; // constante interne, aucune donnée utilisateur
+    b.append(svg, el("span", { text: a.name }));
+    tray.append(b);
+  }
+}
+function markDock() { document.querySelectorAll(".dock-btn").forEach(b => b.classList.toggle("running", !!wins[b.dataset.app])); }
+
+function focusWin(w) { document.querySelectorAll(".win").forEach(x => x.classList.remove("focused")); w.classList.add("focused"); w.style.zIndex = ++z; }
+
+function openApp(id) {
+  if (wins[id]) { wins[id].classList.remove("hidden-win"); focusWin(wins[id]); wins[id].onFocusApp?.(); return; }
+  const a = APPS.find(x => x.id === id); const ws = $("#workspace");
+  const W = Math.min(a.w, ws.clientWidth - 20), H = Math.min(a.h, ws.clientHeight - 20);
+  const x = Math.max(10, Math.min(ws.clientWidth - W - 10, 40 + cascade * 28)), y = Math.max(10, Math.min(ws.clientHeight - H - 10, 20 + cascade * 24));
+  cascade = (cascade + 1) % 6;
+  const body = el("div", { class: "body" });
+  const w = el("section", { class: "win", role: "dialog", "aria-label": a.name, style: `left:${x}px;top:${y}px;width:${W}px;height:${H}px` },
+    el("div", { class: "bar" },
+      el("h2", { text: a.name }),
+      el("span", { class: "sandbox-tag", text: a.sandbox }),
+      el("button", { class: "ctl", type: "button", "aria-label": "Réduire", text: "–", onclick: (e) => { e.stopPropagation(); w.classList.add("hidden-win"); } }),
+      el("button", { class: "ctl close", type: "button", "aria-label": "Fermer", text: "×", onclick: (e) => { e.stopPropagation(); closeApp(id); } })
+    ), body);
+  w.addEventListener("pointerdown", () => focusWin(w));
+  drag(w, $(".bar", w));
+  ws.append(w); wins[id] = w; focusWin(w);
+  RENDER[id](body, w);
+  audit(`ouverture de « ${a.name} » (${a.sandbox})`);
+  markDock();
+}
+function closeApp(id) { wins[id]?.remove(); delete wins[id]; markDock(); }
+function drag(w, handle) {
+  let sx, sy, ox, oy, on = false;
+  handle.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("button") || window.innerWidth <= 720) return;
+    on = true; sx = e.clientX; sy = e.clientY; ox = w.offsetLeft; oy = w.offsetTop; handle.setPointerCapture(e.pointerId); handle.style.cursor = "grabbing";
+  });
+  handle.addEventListener("pointermove", (e) => {
+    if (!on) return; const ws = $("#workspace");
+    w.style.left = Math.max(-w.offsetWidth + 80, Math.min(ws.clientWidth - 80, ox + e.clientX - sx)) + "px";
+    w.style.top = Math.max(0, Math.min(ws.clientHeight - 40, oy + e.clientY - sy)) + "px";
+  });
+  const end = () => { on = false; handle.style.cursor = ""; };
+  handle.addEventListener("pointerup", end); handle.addEventListener("pointercancel", end);
+}
+function toast(msg, kind = "") {
+  const t = el("div", { class: "toast " + kind, text: msg }); $("#toasts").append(t);
+  setTimeout(() => t.remove(), 4800);
+}
+
+/* ================= Élévation (sudo) ================= */
+let elevResolve = null;
+function askElevation(reason) {
+  return new Promise((res) => {
+    elevResolve = res; $("#elev-reason").textContent = reason; $("#elev-pass").value = "";
+    $("#elev").hidden = false; setTimeout(() => $("#elev-pass").focus(), 30);
+  });
+}
+$("#elev-form").addEventListener("submit", (e) => {
+  e.preventDefault(); const ok = $("#elev-pass").value.length >= 4;
+  if (!ok) { toast("Mot de passe trop court : 4 caractères minimum dans l'aperçu.", "danger"); return; }
+  $("#elev").hidden = true; elevResolve?.(true); elevResolve = null;
+});
+$("#elev-cancel").addEventListener("click", () => { $("#elev").hidden = true; elevResolve?.(false); elevResolve = null; });
+
+/* ================= Applications ================= */
+const RENDER = {};
+const refreshers = new Set();
+function refreshAll() { refreshTopbar(); refreshers.forEach(f => { try { f(); } catch {} }); }
+
+/* ---- Bienvenue ---- */
+RENDER.bienvenue = (body) => {
+  let step = 0;
+  const STEPS = [
+    () => [el("div", { class: "eyebrow", text: "Étape 1 sur 4" }), el("h3", { text: "Socle protège d'abord, et explique toujours" }),
+      el("p", { text: "Chaque application tourne dans un bac à sable. Le système de base est en lecture seule. Quand une action demande des droits, Socle te dit lesquels et pourquoi, au lieu de te demander « Oui / Non » sans contexte." })],
+    () => [el("div", { class: "eyebrow", text: "Étape 2 sur 4" }), el("h3", { text: "Choisis ton mode" }),
+      el("p", { text: "Tu peux changer à tout moment en cliquant sur « Mode » dans la barre du haut." }),
+      el("div", { class: "choice" },
+        el("button", { type: "button", "aria-pressed": String(S.mode === "guide"), onclick: () => { setMode("guide"); draw(); } }, el("b", { text: "Guidé" }), el("span", { text: "Le terminal explique chaque commande, propose des corrections et affiche des astuces." })),
+        el("button", { type: "button", "aria-pressed": String(S.mode === "expert"), onclick: () => { setMode("expert"); draw(); } }, el("b", { text: "Expert" }), el("span", { text: "Sortie brute, pas d'explications. Les garde-fous de sécurité restent actifs." })))],
+    () => [el("div", { class: "eyebrow", text: "Étape 3 sur 4" }), el("h3", { text: "Trois réflexes à connaître" }),
+      el("div", { class: "list" },
+        el("div", {}, el("code", { text: "aide" }), el("div", { class: "grow" }, el("div", { text: "Liste les commandes" }), el("div", { class: "sub", text: "Dans le Terminal" }))),
+        el("div", {}, el("code", { text: "explique ls" }), el("div", { class: "grow" }, el("div", { text: "Explique une commande en français" }), el("div", { class: "sub", text: "Fonctionne aussi avec rm, chmod, sudo, git…" }))),
+        el("div", {}, el("code", { text: "retour" }), el("div", { class: "grow" }, el("div", { text: "Annule la dernière mise à jour système" }), el("div", { class: "sub", text: "Ou depuis Sécurité › Mises à jour" }))))],
+    () => [el("div", { class: "eyebrow", text: "Étape 4 sur 4" }), el("h3", { text: "Pour les futurs analystes en cybersécurité" }),
+      el("p", { text: "Le Labo Cyber fournit un petit réseau de machines virtuelles isolées. Les outils d'analyse ne fonctionnent que sur ce périmètre : impossible de scanner un réseau réel par erreur." }),
+      el("div", { class: "row" }, el("button", { class: "btn", type: "button", text: "Ouvrir le Terminal", onclick: () => openApp("terminal") }), el("button", { class: "btn ghost", type: "button", text: "Ouvrir le Labo", onclick: () => openApp("labo") }))]
+  ];
+  const draw = () => {
+    body.textContent = "";
+    const bar = el("div", { class: "steps" }, STEPS.map((_, i) => el("i", { class: i <= step ? "on" : "" })));
+    const nav = el("div", { class: "row" },
+      el("button", { class: "btn ghost small", type: "button", text: "Précédent", disabled: step === 0, onclick: () => { step--; draw(); } }),
+      step < STEPS.length - 1 ? el("button", { class: "btn small", type: "button", text: "Suivant", onclick: () => { step++; draw(); } }) : null);
+    body.append(el("div", { class: "pad" }, bar, ...STEPS[step](), nav));
+  };
+  draw();
+};
+function setMode(m) { S.mode = m; store.set("mode", m); audit("mode " + (m === "guide" ? "guidé" : "expert")); }
+
+/* ---- Terminal ---- */
+const HELP = [
+  ["aide", "liste des commandes"], ["explique <cmd>", "explication d'une commande"], ["ls [chemin]", "contenu d'un dossier"], ["cd <chemin>", "changer de dossier"],
+  ["pwd", "dossier courant"], ["cat <fichier>", "afficher un fichier"], ["touch / mkdir <nom>", "créer fichier / dossier"], ["rm <nom>", "supprimer (avec corbeille)"],
+  ["run <fichier.py>", "exécuter un script (simulé)"], ["installer <paquet>", "installer un paquet signé"], ["perms [app]", "permissions des applications"],
+  ["parefeu", "état du pare-feu"], ["journal", "journal d'audit"], ["sudo <cmd>", "exécuter avec droits admin"], ["scan <ip|réseau>", "scan (Labo uniquement)"],
+  ["grep <motif> <fichier>", "chercher dans un fichier"], ["retour", "revenir à l'image système précédente"], ["mode guide|expert", "changer de mode"], ["effacer", "vider l'écran"]
+];
+const EXPLAIN = {
+  ls: "ls liste le contenu d'un dossier. Sous Windows, l'équivalent est « dir ». Exemple : ls projets",
+  cd: "cd change le dossier courant. « cd .. » remonte d'un niveau, « cd ~ » revient au dossier personnel.",
+  cat: "cat affiche le contenu d'un fichier texte. Pour les gros fichiers, préfère « grep » pour chercher une ligne précise.",
+  rm: "rm supprime un fichier. Sur Linux classique, c'est définitif. Sur Socle, il part d'abord dans la corbeille (30 jours). « rm -rf / » est refusé : le système est en lecture seule.",
+  sudo: "sudo exécute une seule commande avec les droits administrateur. Socle affiche pourquoi elle en a besoin, demande ton mot de passe, puis note l'action au journal d'audit.",
+  chmod: "chmod change les droits d'un fichier (lecture r, écriture w, exécution x) pour le propriétaire, le groupe et les autres. Ex. chmod 600 secret.txt = lisible par toi seul.",
+  git: "git suit l'historique de ton code. Les trois commandes de base : git add (préparer), git commit (enregistrer), git push (envoyer).",
+  grep: "grep cherche les lignes qui contiennent un motif. Ex. grep Failed /lab/logs/auth.log",
+  scan: "scan cherche les machines et ports ouverts. Sur Socle, il ne fonctionne que dans le périmètre du Labo (10.13.37.0/24). Scanner un réseau sans autorisation est illégal dans la plupart des pays.",
+  installer: "installer télécharge un paquet depuis le dépôt Socle, vérifie sa signature cryptographique puis l'installe dans un bac à sable avec les permissions qu'il déclare.",
+  pwd: "pwd (print working directory) affiche le dossier dans lequel tu te trouves.",
+  retour: "retour redémarre sur l'image système précédente. Tes fichiers personnels ne sont pas touchés."
+};
+const KNOWN = ["aide", "help", "explique", "ls", "cd", "pwd", "cat", "touch", "mkdir", "rm", "run", "installer", "perms", "parefeu", "journal", "sudo", "scan", "grep", "retour", "mode", "effacer", "clear", "whoami", "echo", "date", "uname"];
+function lev(a, b) { const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]); for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1)); return d[a.length][b.length]; }
+const ALIASES = { dir: "ls", type: "cat", cls: "clear", del: "rm", ipconfig: "ip", help: "aide", clear: "effacer", "apt": "installer", "brew": "installer", "nmap": "scan" };
+
+RENDER.terminal = (body, w) => {
+  const out = el("div");
+  const input = el("input", { type: "text", "aria-label": "Commande", autocomplete: "off", spellcheck: "false", autocapitalize: "off" });
+  const promptEl = el("span", { class: "p" });
+  const term = el("div", { class: "term", onclick: () => input.focus() }, out, el("div", { class: "inrow" }, promptEl, input));
+  body.style.background = "var(--term-bg)"; body.append(term);
+  const hist = []; let hi = 0; let busy = false;
+  const print = (text, cls = "") => { out.append(el("div", { class: "line " + cls, text })); term.scrollTop = term.scrollHeight; };
+  const guide = (text) => { if (S.mode === "guide") print("→ " + text, "m"); };
+  const setPrompt = () => { promptEl.textContent = `${S.user}@socle ${prettyCwd()} $`; };
+  setPrompt();
+  print("Socle OS " + S.version + " · shell interactif", "i");
+  guide("Mode guidé actif. Tape « aide » pour la liste des commandes, ↑ pour l'historique, Tab pour compléter.");
+
+  async function exec(line, elevated = false) {
+    const args = line.trim().split(/\s+/).filter(Boolean); if (!args.length) return;
+    let cmd = args.shift().toLowerCase();
+    if (ALIASES[cmd]) { if (S.mode === "guide" && !["help", "clear"].includes(cmd)) guide(`« ${cmd} » vient d'un autre système. Ici, l'équivalent est « ${ALIASES[cmd]} ».`); cmd = ALIASES[cmd]; }
+    const a0 = args[0];
+    switch (cmd) {
+      case "aide": HELP.forEach(([c, d]) => print(c.padEnd(24) + d)); break;
+      case "explique": print(a0 ? (EXPLAIN[a0.toLowerCase()] || `Pas encore d'explication pour « ${a0} ».`) : "Usage : explique <commande>", a0 && EXPLAIN[a0.toLowerCase()] ? "" : "w"); break;
+      case "pwd": print(pathStr(cwd)); break;
+      case "whoami": print(elevated ? "root (élévation temporaire)" : S.user); break;
+      case "date": print(new Date().toLocaleString("fr-FR")); break;
+      case "uname": print("Socle " + S.version + " noyau Linux 6.18.44 x86_64 (lockdown=integrity)"); break;
+      case "echo": print(args.join(" ")); break;
+      case "effacer": out.textContent = ""; break;
+      case "ls": {
+        const r = resolve(a0 || "."); if (!r.node) { print(`ls : « ${a0} » introuvable`, "e"); break; }
+        if (r.node.type === "f") { print(a0); break; }
+        const names = Object.keys(r.node.c).sort();
+        print(names.length ? names.map(n => r.node.c[n].type === "d" ? n + "/" : n).join("   ") : "(dossier vide)");
+        if (r.ro) guide("Ce dossier fait partie du système : lecture seule.");
+        break; }
+      case "cd": {
+        const r = resolve(a0 || "~"); if (!r.node || r.node.type !== "d") { print(`cd : « ${a0} » n'est pas un dossier`, "e"); break; }
+        cwd = r.parts; setPrompt(); break; }
+      case "cat": {
+        if (!a0) { print("Usage : cat <fichier>", "w"); break; }
+        const r = resolve(a0); if (!r.node) { print(`cat : « ${a0} » introuvable`, "e"); break; }
+        if (r.node.type === "d") { print(`cat : « ${a0} » est un dossier. Essaie : ls ${a0}`, "e"); break; }
+        if (r.parts[0] === "lab" && !S.perms.terminal.home) {}
+        print(r.node.v.replace(/\n$/, "")); break; }
+      case "grep": {
+        if (args.length < 2) { print("Usage : grep <motif> <fichier>", "w"); break; }
+        const r = resolve(args[1]); if (!r.node || r.node.type !== "f") { print(`grep : « ${args[1]} » introuvable`, "e"); break; }
+        const hits = r.node.v.split("\n").filter(l => l.includes(a0));
+        hits.slice(0, 40).forEach(l => print(l)); if (hits.length > 40) print(`… ${hits.length - 40} lignes de plus`, "m");
+        guide(`${hits.length} ligne(s) trouvée(s). Astuce : regarde quelle IP revient le plus souvent.`); break; }
+      case "touch": case "mkdir": {
+        if (!a0 || !/^[\w.\-]{1,40}$/.test(a0)) { print(`Usage : ${cmd} <nom> (lettres, chiffres, . _ - uniquement)`, "w"); break; }
+        const dir = resolve("."); if (dir.ro) { print(`${cmd} : refusé, ${pathStr(cwd)} est en lecture seule (image système).`, "e"); guide("Travaille dans ton dossier personnel : cd ~"); break; }
+        if (dir.node.c[a0]) { print(`${cmd} : « ${a0} » existe déjà`, "w"); break; }
+        dir.node.c[a0] = cmd === "mkdir" ? { type: "d", c: {} } : { type: "f", v: "" }; print(`créé : ${a0}`, "p"); refreshAll(); break; }
+      case "rm": {
+        if (args.includes("-rf") && (args.includes("/") || args.includes("/*"))) { print("rm : refusé. Le système est une image en lecture seule ; cette commande ne peut rien détruire ici.", "e"); audit("tentative rm -rf / bloquée"); break; }
+        const name = args.filter(x => !x.startsWith("-"))[0]; if (!name) { print("Usage : rm <nom>", "w"); break; }
+        const r = resolve(name); if (!r.node) { print(`rm : « ${name} » introuvable`, "e"); break; }
+        if (r.ro) { print(`rm : refusé, « ${name} » appartient à l'image système.`, "e"); break; }
+        const parent = resolve(pathStr(r.parts.slice(0, -1)));
+        delete parent.node.c[r.parts[r.parts.length - 1]]; print(`« ${name} » déplacé dans la corbeille (récupérable 30 jours).`, "p"); refreshAll(); break; }
+      case "run": {
+        const r = a0 && resolve(a0); if (!r || !r.node || r.node.type !== "f") { print("Usage : run <fichier.py>", "w"); break; }
+        if (a0.endsWith(".py")) { const m = r.node.v.match(/print\(f?"([^"]*)"\)/); const nm = (r.node.v.match(/nom\s*=\s*"([^"]*)"/) || [])[1] || "";
+          print(m ? m[1].replace("{nom}", nm) : "(le script ne produit aucune sortie)"); guide("Exécution simulée dans un bac à sable Python sans réseau."); }
+        else print("run : seuls les fichiers .py sont simulés dans l'aperçu.", "w");
+        break; }
+      case "installer": {
+        if (!a0) { print("Usage : installer <paquet>", "w"); break; }
+        if (!elevated) { print("installer : cette action modifie le système, elle demande une élévation.", "w"); guide("Tape : sudo installer " + a0); break; }
+        if (!/^[a-z0-9][a-z0-9.\-]{0,40}$/.test(a0)) { print("installer : nom de paquet invalide", "e"); break; }
+        busy = true; print(`Téléchargement de ${a0} depuis depot.socle.local…`, "m"); await wait(500);
+        if (a0.includes("crack") || a0.includes("keygen")) { print(`Signature : ÉCHEC. ${a0} n'est pas signé par une clé de confiance. Installation annulée.`, "e"); audit(`paquet ${a0} rejeté (signature invalide)`); busy = false; break; }
+        print("Signature ed25519 : valide (clé Socle Release 2026)", "p"); await wait(350);
+        print(`Permissions demandées : réseau (non), dossier personnel (lecture), USB (non)`); await wait(300);
+        print(`${a0} installé dans son bac à sable.`, "p"); audit(`paquet ${a0} installé (signature valide)`); busy = false; break; }
+      case "perms": {
+        const list = a0 ? Object.entries(S.perms).filter(([k]) => k === a0.toLowerCase()) : Object.entries(S.perms);
+        if (!list.length) { print(`perms : application « ${a0} » inconnue. Disponibles : ${Object.keys(S.perms).join(", ")}`, "e"); break; }
+        for (const [, p] of list) print(p.label.padEnd(18) + Object.keys(PERM_NAMES).map(k => (p[k] ? "✓ " : "· ") + PERM_NAMES[k]).join("  "));
+        guide("Modifie ces droits dans l'application Sécurité. Les changements s'appliquent ici immédiatement."); break; }
+      case "parefeu": print(`Entrant : ${S.firewall.inbound === "deny" ? "tout refuser sauf exceptions" : "OUVERT"}   Sortant : autorisé${S.firewall.outboundLog ? ", journalisé" : ""}`, S.firewall.inbound === "deny" ? "" : "w"); break;
+      case "journal": (S.audit.length ? S.audit.slice(0, 15) : ["(vide)"]).forEach(l => print(l, "m")); break;
+      case "mode": if (a0 === "guide" || a0 === "expert") { setMode(a0); print("Mode " + a0 + " activé.", "p"); } else print("Usage : mode guide|expert", "w"); break;
+      case "retour": {
+        if (!elevated) { print("retour : demande une élévation.", "w"); guide("Tape : sudo retour"); break; }
+        rollback() ? print(`Image système ramenée à ${S.version}. Fichiers personnels intacts.`, "p") : print("retour : aucune image précédente conservée.", "w"); break; }
+      case "scan": {
+        if (!a0) { print("Usage : scan <ip ou réseau>", "w"); break; }
+        if (!/^10\.13\.37\.(\d{1,3}(\/24)?|0\/24)$/.test(a0)) { print(`scan : refusé. « ${a0} » est hors du périmètre autorisé (10.13.37.0/24).`, "e"); guide("Socle bloque les scans hors du Labo pour éviter de cibler un réseau sans autorisation."); audit(`scan hors périmètre bloqué : ${a0}`); break; }
+        if (!wins.labo) { print("scan : le Labo Cyber doit être ouvert (il démarre les VM isolées).", "w"); break; }
+        busy = true; print("Scan du périmètre labo…", "m"); await wait(600); LAB_HOSTS.forEach(h => print(`${h.ip.padEnd(13)} ${h.name.padEnd(10)} ports : ${h.ports}`)); busy = false; audit(`scan labo ${a0}`); break; }
+      case "sudo": {
+        if (!args.length) { print("Usage : sudo <commande>", "w"); break; }
+        busy = true; const ok = await askElevation(`La commande « ${args.join(" ")} » demande les droits administrateur.`); busy = false;
+        if (!ok) { print("sudo : élévation refusée.", "e"); audit(`sudo refusé : ${args.join(" ")}`); break; }
+        audit(`sudo accordé : ${args.join(" ")}`); await exec(args.join(" "), true); break; }
+      default: {
+        const best = KNOWN.map(k => [k, lev(cmd, k)]).sort((x, y) => x[1] - y[1])[0];
+        print(`${cmd} : commande introuvable`, "e");
+        if (best && best[1] <= 2) print(`Vouliez-vous dire « ${best[0]} » ?`, "w"); else guide("Tape « aide » pour voir les commandes disponibles.");
+      }
+    }
+  }
+  input.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") {
+      if (busy) return; const v = input.value; input.value = "";
+      print(promptEl.textContent + " " + v, "p"); if (v.trim()) { hist.push(v); hi = hist.length; }
+      try { await exec(v); } catch (err) { print("erreur interne : " + err.message, "e"); busy = false; }
+    } else if (e.key === "ArrowUp") { if (hi > 0) input.value = hist[--hi]; e.preventDefault(); }
+    else if (e.key === "ArrowDown") { if (hi < hist.length - 1) input.value = hist[++hi]; else { hi = hist.length; input.value = ""; } e.preventDefault(); }
+    else if (e.key === "Tab") {
+      e.preventDefault(); const parts = input.value.split(" ");
+      if (parts.length === 1) { const m = KNOWN.filter(k => k.startsWith(parts[0])); if (m.length === 1) input.value = m[0] + " "; else if (m.length) print(m.join("  "), "m"); }
+      else { const last = parts.pop(); const slash = last.lastIndexOf("/"); const base = slash >= 0 ? last.slice(0, slash + 1) : ""; const r = resolve(base || ".");
+        if (r.node && r.node.type === "d") { const m = Object.keys(r.node.c).filter(n => n.startsWith(last.slice(slash + 1)));
+          if (m.length === 1) input.value = [...parts, base + m[0] + (r.node.c[m[0]].type === "d" ? "/" : "")].join(" "); else if (m.length) print(m.join("  "), "m"); } }
+    }
+  });
+  w.onFocusApp = () => input.focus(); setTimeout(() => input.focus(), 20);
+};
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+/* ---- Fichiers ---- */
+RENDER.fichiers = (body) => {
+  body.style.overflow = "hidden";
+  const nav = el("nav", { "aria-label": "Arborescence" }); const view = el("div", { class: "view" });
+  body.append(el("div", { class: "files" }, nav, view));
+  let sel = "/home/dev/LISEZ-MOI.md";
+  const walk = (node, parts, depth) => {
+    for (const name of Object.keys(node.c).sort()) {
+      const n = node.c[name], p = [...parts, name], ps = pathStr(p);
+      nav.append(el("button", { type: "button", class: ps === sel ? "sel" : "", style: `padding-left:${6 + depth * 12}px`, text: (n.type === "d" ? "▸ " : "  ") + name, onclick: () => { sel = ps; draw(); } }));
+      if (n.type === "d" && depth < 3) walk(n, p, depth + 1);
+    }
+  };
+  const draw = () => {
+    nav.textContent = ""; walk(FS, [], 0); view.textContent = "";
+    const r = resolve(sel); if (!r.node) { sel = "/home/dev"; return draw(); }
+    view.append(el("div", { class: "row" }, el("code", { text: sel }), el("span", { class: "chip" }, el("span", { class: "dot" + (r.ro ? " warn" : "") }), el("span", { text: r.ro ? "Lecture seule (système)" : "Modifiable" }))));
+    if (r.node.type === "d") view.append(el("p", { class: "hint", style: "margin-top:10px", text: Object.keys(r.node.c).length + " élément(s)" }));
+    else { view.append(el("pre", { text: r.node.v || "(fichier vide)" }));
+      if (!r.ro) view.append(el("div", { class: "row", style: "margin-top:10px" }, el("button", { class: "btn small", type: "button", text: "Ouvrir dans l'Éditeur", onclick: () => { EDIT.path = sel; openApp("editeur"); EDIT.reload?.(); } }))); }
+  };
+  draw(); refreshers.add(draw);
+};
+
+/* ---- Éditeur ---- */
+const EDIT = { path: "/home/dev/projets/bonjour.py", reload: null };
+RENDER.editeur = (body) => {
+  body.style.overflow = "hidden";
+  const ta = el("textarea", { id: "editor-area", "aria-label": "Contenu du fichier", spellcheck: "false", style: "flex:1;resize:none;border:0;outline:0;background:var(--term-bg);color:var(--term-fg);font:13px/1.55 var(--f-mono);padding:14px;tab-size:4;min-height:0" });
+  const name = el("code"); const status = el("span", { class: "hint" });
+  const save = el("button", { class: "btn small", type: "button", text: "Enregistrer", onclick: () => {
+    const r = resolve(EDIT.path); if (!r.node || r.ro) { status.textContent = "Impossible : fichier système en lecture seule."; return; }
+    r.node.v = ta.value; status.textContent = "Enregistré à " + new Date().toLocaleTimeString("fr-FR"); audit("fichier modifié : " + EDIT.path); } });
+  body.append(el("div", { class: "col" }, el("div", { class: "row", style: "padding:8px 12px;border-bottom:1px solid var(--line)" }, name, el("span", { style: "flex:1" }), status, save), ta));
+  ta.addEventListener("keydown", (e) => { if (e.key === "Tab") { e.preventDefault(); const s = ta.selectionStart; ta.setRangeText("    ", s, ta.selectionEnd, "end"); } if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save.click(); } });
+  EDIT.reload = () => { const r = resolve(EDIT.path); name.textContent = EDIT.path; ta.value = r.node ? r.node.v : ""; ta.readOnly = !r.node || r.ro; status.textContent = "Bac à sable sans réseau · Ctrl+S pour enregistrer"; };
+  EDIT.reload();
+};
+
+/* ---- Sécurité ---- */
+RENDER.securite = (body) => {
+  let tab = "apercu";
+  const tabs = el("div", { class: "tabs", role: "tablist" }); const panel = el("div", { class: "scroll" });
+  body.style.overflow = "hidden"; body.append(el("div", { class: "col" }, tabs, panel));
+  const T = { apercu: "Vue d'ensemble", apps: "Permissions", reseau: "Pare-feu", maj: "Mises à jour", journal: "Journal" };
+  const sw = (checked, onchange, label) => { const i = el("input", { type: "checkbox", "aria-label": label }); i.checked = checked; i.addEventListener("change", () => onchange(i.checked)); return el("label", { class: "switch" }, i, el("span")); };
+  const draw = () => {
+    tabs.textContent = ""; for (const [k, v] of Object.entries(T)) tabs.append(el("button", { type: "button", role: "tab", "aria-selected": String(tab === k), text: v, onclick: () => { tab = k; draw(); } }));
+    panel.textContent = ""; const p = el("div", { class: "pad" }); panel.append(p);
+    if (tab === "apercu") {
+      const iss = secState();
+      p.append(el("div", { class: "eyebrow", text: iss.length ? "Action recommandée" : "Tout est en ordre" }), el("h3", { text: iss.length ? "Certains réglages affaiblissent la protection" : "Ton poste est protégé" }));
+      const item = (ok, t, d) => el("div", {}, el("span", { class: "dot" + (ok ? "" : " warn") }), el("div", { class: "grow" }, el("div", { text: t }), el("div", { class: "sub", text: d })));
+      p.append(el("div", { class: "list" },
+        item(S.secureBoot, "Démarrage vérifié", "Chaque étape du démarrage est signée (UEFI Secure Boot + mesure TPM)."),
+        item(S.diskEncrypted, "Disque chiffré", "LUKS2, clé scellée dans le TPM et liée à ton mot de passe."),
+        item(S.immutable, "Système en lecture seule", S.immutable ? "L'image système ne peut pas être modifiée pendant que tu travailles." : "Mode développement système actif : désactive-le dès que tu as fini."),
+        item(S.firewall.inbound === "deny", "Pare-feu entrant", S.firewall.inbound === "deny" ? "Aucune connexion entrante acceptée sans exception explicite." : "Toutes les connexions entrantes sont acceptées."),
+        item(true, "Applications isolées", Object.keys(S.perms).length + " applications, chacune dans son bac à sable.")));
+    }
+    if (tab === "apps") {
+      p.append(el("p", { text: "Chaque application ne voit que ce que tu lui accordes. Les changements sont immédiats et visibles avec « perms » dans le Terminal." }));
+      for (const [id, a] of Object.entries(S.perms)) {
+        const rows = Object.entries(PERM_NAMES).map(([k, n]) => el("div", {}, el("div", { class: "grow", text: n }),
+          sw(a[k], (v) => { a[k] = v; audit(`${a.label} : ${n} ${v ? "accordé" : "retiré"}`); if (v && (k === "cam" || k === "mic")) toast(`${a.label} peut maintenant utiliser : ${n}. Un témoin s'affichera à chaque utilisation.`, "warn"); }, `${n} pour ${a.label}`)));
+        p.append(el("h3", { text: a.label }), el("div", { class: "list" }, rows));
+      }
+    }
+    if (tab === "reseau") {
+      p.append(el("div", { class: "list" },
+        el("div", {}, el("div", { class: "grow" }, el("div", { text: "Refuser les connexions entrantes" }), el("div", { class: "sub", text: "Recommandé. Ouvre un port précis plutôt que de tout désactiver." })),
+          sw(S.firewall.inbound === "deny", async (v) => { if (!v) { const ok = await askElevation("Ouvrir le pare-feu entrant expose tous les services de ce poste au réseau."); if (!ok) { draw(); return; } } S.firewall.inbound = v ? "deny" : "allow"; audit("pare-feu entrant : " + (v ? "refuser" : "ouvert")); if (!v) toast("Pare-feu entrant ouvert. Pense à le refermer.", "danger"); draw(); }, "Refuser les connexions entrantes")),
+        el("div", {}, el("div", { class: "grow" }, el("div", { text: "Journaliser les connexions sortantes" }), el("div", { class: "sub", text: "Utile pour repérer une application qui contacte un serveur inattendu." })),
+          sw(S.firewall.outboundLog, (v) => { S.firewall.outboundLog = v; audit("journal sortant : " + (v ? "actif" : "inactif")); }, "Journaliser les connexions sortantes"))));
+      p.append(el("h3", { text: "Exceptions" }), el("div", { class: "list" }, el("div", {}, el("code", { text: "8080/tcp" }), el("div", { class: "grow" }, el("div", { text: "Serveur de dev (serveur.js)" }), el("div", { class: "sub", text: "Réseau local uniquement" })))));
+    }
+    if (tab === "maj") {
+      p.append(el("p", { text: "Les mises à jour remplacent l'image système en entier, au redémarrage. Si la nouvelle image ne démarre pas, Socle revient seul à la précédente." }),
+        el("div", { class: "row" }, el("span", { class: "chip", text: "Image active : " + S.version }),
+          el("button", { class: "btn small", type: "button", text: "Rechercher une mise à jour", onclick: async () => { const ok = await askElevation("Installer une nouvelle image système."); if (!ok) return; update(); draw(); } }),
+          el("button", { class: "btn ghost small", type: "button", text: "Revenir à l'image précédente", disabled: S.snapshots.length < 2, onclick: async () => { const ok = await askElevation("Redémarrer sur l'image système précédente."); if (ok && rollback()) { toast("Retour à " + S.version + " effectué."); draw(); } } })));
+      p.append(el("div", { class: "list" }, S.snapshots.slice().reverse().map(s => el("div", {}, el("code", { text: s.id }), el("div", { class: "grow" }, el("div", { text: s.note }), el("div", { class: "sub", text: s.date })), s.id === S.version ? el("span", { class: "chip", text: "active" }) : null))));
+      p.append(el("div", { class: "list" }, el("div", {}, el("div", { class: "grow" }, el("div", { text: "Mode développement système" }), el("div", { class: "sub", text: "Rend /usr modifiable jusqu'au prochain redémarrage. Réservé à qui développe Socle lui-même." })),
+        sw(!S.immutable, async (v) => { if (v) { const ok = await askElevation("Rendre l'image système modifiable (désactive une protection majeure)."); if (!ok) { draw(); return; } } S.immutable = !v; audit("système " + (v ? "modifiable" : "lecture seule")); draw(); }, "Mode développement système"))));
+    }
+    if (tab === "journal") {
+      p.append(el("p", { text: "Chaque élévation, changement de permission et blocage est enregistré ici. Le journal réel est signé et ne peut pas être effacé par une application." }),
+        el("div", { class: "logbox", text: S.audit.join("\n") || "(vide)" }));
+    }
+  };
+  draw(); refreshers.add(() => { if (tab === "journal" || tab === "apercu") draw(); });
+};
+function update() { const [a, b, c] = S.version.split(".").map(Number); const v = `${a}.${b}.${c + 1}`; S.snapshots.push({ id: v, date: new Date().toISOString().slice(0, 10), note: "Correctifs de sécurité (aperçu)" }); if (S.snapshots.length > 3) S.snapshots.shift(); S.version = v; audit("mise à jour vers " + v); toast("Image " + v + " installée. Elle sera active au prochain redémarrage."); }
+function rollback() { const i = S.snapshots.findIndex(s => s.id === S.version); if (i <= 0) return false; S.version = S.snapshots[i - 1].id; audit("retour à l'image " + S.version); return true; }
+
+/* ---- Labo Cyber ---- */
+const LAB_HOSTS = [
+  { ip: "10.13.37.12", name: "srv-web", ports: "22/ssh 80/http 443/https" },
+  { ip: "10.13.37.20", name: "poste-01", ports: "aucun port ouvert" },
+  { ip: "10.13.37.30", name: "srv-db", ports: "5432/postgres (réseau labo seulement)" },
+  { ip: "10.13.37.66", name: "inconnu", ports: "4444/tcp ?" }
+];
+RENDER.labo = (body) => {
+  const p = el("div", { class: "pad" }); body.append(p);
+  const draw = () => {
+    p.textContent = "";
+    p.append(el("div", { class: "eyebrow", text: "Exercice 1 · Analyse de journal" }), el("h3", { text: "Quelqu'un tente d'entrer sur srv-web" }),
+      el("div", { class: "scope", text: "Périmètre autorisé : 10.13.37.0/24. Ces machines sont des VM jetables sans accès à Internet. Les outils d'attaque et de scan de Socle refusent toute cible hors de ce réseau." }),
+      el("p", { text: "Le journal SSH de srv-web montre une série d'échecs de connexion. Trouve l'adresse IP de l'attaquant. Dans le Terminal, essaie : grep Failed /lab/logs/auth.log puis scan 10.13.37.0/24." }),
+      el("div", { class: "logbox", text: FS.c.lab.c.logs.c["auth.log"].v.split("\n").slice(0, 14).join("\n") + "\n…" }));
+    const inp = el("input", { type: "text", id: "lab-answer", placeholder: "ex. 10.13.37.x", "aria-label": "Adresse IP de l'attaquant", maxlength: "15", style: "max-width:200px" });
+    const msg = el("span", { class: "hint" });
+    const check = () => { const v = inp.value.trim(); if (v === "10.13.37.66") { S.labSolved = true; audit("labo : exercice 1 réussi"); draw(); toast("Bien vu. 10.13.37.66 enchaîne les mots de passe sur des comptes qui n'existent pas : c'est une attaque par dictionnaire."); }
+      else if (v === "10.13.37.20") msg.textContent = "Cette IP a un seul échec, pour un compte réel (alice). Plutôt une faute de frappe."; else if (v === "10.13.37.12") msg.textContent = "Cette IP se connecte avec succès par clé : c'est le déploiement légitime."; else msg.textContent = "Pas encore. Compte les lignes « Failed » par adresse IP."; };
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") check(); });
+    if (S.labSolved) {
+      p.append(el("div", { class: "list" }, el("div", {}, el("span", { class: "dot" }), el("div", { class: "grow" }, el("div", { text: "Exercice réussi : 10.13.37.66" }), el("div", { class: "sub", text: "Réponse défensive : bloquer l'IP, désactiver l'authentification SSH par mot de passe, activer fail2ban." })))),
+        el("h3", { text: "Machines du labo" }), el("div", { class: "tablewrap" }, el("table", { class: "hosts" }, el("thead", {}, el("tr", {}, el("th", { text: "IP" }), el("th", { text: "Nom" }), el("th", { text: "Ports" }))), el("tbody", {}, LAB_HOSTS.map(h => el("tr", {}, el("td", { text: h.ip }), el("td", { text: h.name }), el("td", { text: h.ports })))))),
+        el("p", { text: "Exercice 2 (version complète) : identifier le service qui écoute sur 4444/tcp, isoler la machine, rédiger le rapport d'incident." }));
+    } else p.append(el("div", { class: "row" }, inp, el("button", { class: "btn small", type: "button", text: "Vérifier", onclick: check }), msg));
+  };
+  draw();
+};
+
+/* ---- Réglages ---- */
+RENDER.reglages = (body) => {
+  const p = el("div", { class: "pad" }); body.append(p);
+  const draw = () => {
+    p.textContent = "";
+    const opt = (val, label) => el("button", { type: "button", "aria-pressed": String(S.theme === val), onclick: () => { S.theme = val; store.set("theme", val); applyTheme(); draw(); } }, el("b", { text: label }));
+    p.append(el("h3", { text: "Apparence" }), el("div", { class: "choice" }, opt("system", "Comme l'appareil"), opt("dark", "Sombre"), opt("light", "Clair")));
+    p.append(el("h3", { text: "Assistance" }), el("div", { class: "choice" },
+      el("button", { type: "button", "aria-pressed": String(S.mode === "guide"), onclick: () => { setMode("guide"); draw(); } }, el("b", { text: "Guidé" }), el("span", { text: "Explications et suggestions" })),
+      el("button", { type: "button", "aria-pressed": String(S.mode === "expert"), onclick: () => { setMode("expert"); draw(); } }, el("b", { text: "Expert" }), el("span", { text: "Sortie brute" }))));
+    p.append(el("h3", { text: "À propos" }), el("p", { text: `Socle OS ${S.version} — aperçu interactif. Base prévue : noyau Linux, image système atomique, applications Flatpak isolées, Wayland. Cet aperçu simule l'interface ; il ne contient pas de vrai système d'exploitation.` }));
+  };
+  draw();
+};
+
+/* ================= Démarrage ================= */
+const BOOT = ["UEFI Secure Boot : chaîne de signatures vérifiée", "TPM 2.0 : mesures PCR 0-7 conformes", "Déverrouillage du disque chiffré (LUKS2)", "Noyau Linux 6.18.44 · lockdown=integrity",
+  "Montage de l'image système socle-" + S.version + " en lecture seule", "Politique d'isolation des applications chargée", "Pare-feu : entrant refusé par défaut", "Serveur graphique Wayland prêt"];
+let booted = false;
+async function boot() {
+  const log = $("#boot-log");
+  for (const l of BOOT) { if (booted) return; log.append(el("div", {}, el("span", { class: "ok", text: "[  OK  ] " }), document.createTextNode(l))); await wait(230); }
+  showLogin();
+}
+function showLogin() { if (booted) return; booted = true; $("#boot").hidden = true; $("#login").hidden = false; $("#login-pass").focus(); }
+$("#skip-boot").addEventListener("click", showLogin);
+$("#login-form").addEventListener("submit", (e) => {
+  e.preventDefault(); const u = $("#login-user").value.trim(), pw = $("#login-pass").value;
+  if (!/^[a-z][a-z0-9_-]{1,23}$/.test(u)) { $("#login-err").textContent = "Nom d'utilisateur : minuscules, chiffres, - ou _ (2 à 24 caractères)."; return; }
+  if (pw.length < 4) { $("#login-err").textContent = "Mot de passe trop court : 4 caractères minimum dans l'aperçu."; return; }
+  S.user = u; $("#login").hidden = true; $("#desktop").hidden = false;
+  buildDock(); refreshTopbar(); tick(); setInterval(tick, 15000);
+  audit("ouverture de session : " + u);
+  openApp("bienvenue");
+});
+function tick() { $("#clock").textContent = new Date().toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" }); }
+const toggleMode = () => { setMode(S.mode === "guide" ? "expert" : "guide"); toast("Mode " + (S.mode === "guide" ? "guidé" : "expert") + " activé."); };
+$("#mode-chip").addEventListener("click", toggleMode);
+$("#mode-chip").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleMode(); } });
+$("#sec-chip").addEventListener("click", () => openApp("securite"));
+boot();
+})();
+</script>
