@@ -260,6 +260,80 @@ def _m3_e9(C_ha, placette_max):
     _exige(int(placette_max) == A3["placette_max_carbone"], f"La placette {placette_max} n'est pas celle qui stocke le plus de carbone.")
 
 
+# ---------------------------------------------------------------- Module 4
+A4 = _A["m4"]
+
+
+def _comparer_transects(s, ref, nom, tol):
+    _exige(hasattr(s, "to_dict"), f"`{nom}` doit être une Series pandas indexée par transect.")
+    d = {str(k): float(v) for k, v in s.to_dict().items()}
+    manquants = sorted(set(ref) - set(d))
+    if manquants:
+        raise _Echec(f"`{nom}` n'a pas de valeur pour {len(manquants)} transect(s), par exemple {manquants[:3]}. "
+                     "Un transect où l'espèce n'a pas été vue compte avec un taux de 0 : il faut le garder (reindex avec fill_value=0).")
+    en_trop = sorted(set(d) - set(ref))
+    _exige(not en_trop, f"`{nom}` contient des transects à exclure : {en_trop}. Sans longueur connue, on ne peut pas calculer de taux.")
+    for k, v in ref.items():
+        _exige(abs(d[k] - v) <= tol, f"Transect {k} : {nom} = {d[k]:.4f}, attendu ≈ {v}. Vérifie que tu divises par la longueur en km, pas en m.")
+
+
+def _m4_e1(df):
+    _exige(hasattr(df, "shape"), "On attend un DataFrame (résultat de pd.read_excel).")
+    _exige(df.shape == (A4["n_brut"], A4["n_col"]), f"Forme {df.shape}, attendu {(A4['n_brut'], A4['n_col'])}.")
+
+
+def _m4_e2(n_transects):
+    _exige(int(n_transects) == len(A4["L_km"]) + len(A4["sans_fin"]), f"{n_transects} transects, ce n'est pas le bon nombre. Compte les valeurs DIFFÉRENTES de la colonne 'Transec N°' (pas le nombre de lignes).")
+
+
+def _m4_e3(df):
+    vus = set(df.loc[df["Types_Donnees"] == "Faune", "Espèce_Fact_Nat2"].unique())
+    en_trop = sorted(vus - set(A4["especes_nat2_faune"]))
+    _exige(not en_trop, f"Noms d'espèces encore non harmonisés : {en_trop}.")
+    vus_h = set(df.loc[df["Espèce_Fact_Nat1"] == "Homme", "Type indice "].unique())
+    en_trop = sorted(vus_h - set(A4["indices_homme"]))
+    _exige(not en_trop, f"Indices humains encore en double : {en_trop}. 'Coupe machette' et 'Coupe à la machette' désignent la même chose.")
+
+
+def _m4_e4(nb_doublons, df):
+    if int(nb_doublons) == 0:
+        raise _Echec("Tu trouves 0 doublon parce que la colonne ID est différente sur chaque ligne, même pour une saisie en double. "
+                     "Cherche les doublons sur toutes les colonnes SAUF ID (paramètre subset).")
+    _exige(int(nb_doublons) == A4["nb_doublons"], f"{nb_doublons} doublons, attendu {A4['nb_doublons']}.")
+    _exige(len(df) == A4["n_apres_doublons"], f"{len(df)} lignes après suppression, attendu {A4['n_apres_doublons']}.")
+
+
+def _m4_e5(nb_inverses, df):
+    _exige(int(nb_inverses) == A4["nb_inverses"], f"{nb_inverses} lignes inversées, attendu {A4['nb_inverses']}. Au Cameroun, la longitude (vers 14-16° E) est toujours plus grande que la latitude (vers 2-3° N) dans cette zone.")
+    _exige(float(df["Longitude"].min()) > 10, "Il reste des longitudes inférieures à 10° : l'inversion n'est pas corrigée.")
+    _exige(float(df["Latitude"].max()) < 5, "Il reste des latitudes supérieures à 5° : l'inversion n'est pas corrigée.")
+
+
+def _m4_e6(L_km, sans_fin):
+    _exige(sorted(sans_fin) == A4["sans_fin"], f"Transect(s) sans point de fin : attendu {A4['sans_fin']}, tu as {sorted(sans_fin)}.")
+    _comparer_transects(L_km, A4["L_km"], "L_km", 1e-6)
+
+
+def _m4_e7(tr_gor):
+    _comparer_transects(tr_gor, A4["tr_gor"], "tr_gor", 1e-3)
+
+
+def _m4_e8(tr_gor_strate):
+    _exige(hasattr(tr_gor_strate, "to_dict"), "`tr_gor_strate` doit être une Series indexée par strate.")
+    d = {str(k): float(v) for k, v in tr_gor_strate.to_dict().items()}
+    _exige(set(d) == set(A4["tr_gor_strate"]), f"On attend une valeur par strate : {sorted(A4['tr_gor_strate'])}.")
+    for k, v in A4["tr_gor_strate"].items():
+        _exige(abs(d[k] - v) <= 1e-3, f"{k} : {d[k]:.4f} nids/km, attendu ≈ {v}. Le taux d'une strate = (total des nids de la strate) / (total des km de la strate), pas la moyenne des taux des transects.")
+
+
+def _m4_e9(pression):
+    _comparer_transects(pression, A4["pression"], "pression", 1e-3)
+
+
+def _m4_e10(nb):
+    _exige(int(nb) == A4["nids_perp_manquante"], f"{nb} nids sans distance perpendiculaire, attendu {A4['nids_perp_manquante']} (compté sur toutes les lignes de nids, toutes espèces).")
+
+
 _VERIFS = {k[1:]: v for k, v in globals().items() if k.startswith("_m") and callable(v)}
 
 
@@ -315,8 +389,17 @@ _INDICES = {
     "m3_e7": ["Formule de Chave et al. (2014) : AGB = 0.0673 × (ρ × D² × H)^0.976, en kg.", "En Python : 0.0673 * (densite * dhp ** 2 * hauteur) ** 0.976."],
     "m3_e8": ["Applique la fonction aux colonnes : biomasse_chave(df[\"densite_bois\"], df[\"dhp\"], df[\"hauteur\"]).", "Somme par placette, divise par 1000 (kg → t) et par 0.5 (→ par ha)."],
     "m3_e9": ["Le carbone vaut 47 % de la biomasse sèche (fraction par défaut du GIEC) : C_ha = AGB_ha * 0.47.", ".idxmax() donne la placette avec la plus grande valeur."],
+    "m4_e1": ["pd.read_excel(\"donnees/transects_bruts.xlsx\") lit un fichier Excel (il faut le paquet openpyxl, présent dans Anaconda et Colab)."],
+    "m4_e2": ["Une colonne a une méthode .nunique() qui compte les valeurs distinctes.", "Attention au nom exact de la colonne : df[\"Transec N°\"]."],
+    "m4_e3": ["Même méthode qu'au module 2 : .str.strip() puis .replace({...}).", "Regarde df[\"Espèce_Fact_Nat2\"].value_counts() pour repérer les variantes. Attention : la colonne s'appelle \"Type indice \" avec une espace à la fin."],
+    "m4_e4": ["Construis la liste des colonnes sans ID : cols = [c for c in df.columns if c != \"ID\"].", "df.duplicated(subset=cols).sum() compte, df.drop_duplicates(subset=cols) supprime."],
+    "m4_e5": ["inv = df[\"Longitude\"] < df[\"Latitude\"] donne True pour les lignes inversées.", "Pour échanger : df.loc[inv, [\"Longitude\", \"Latitude\"]] = df.loc[inv, [\"Latitude\", \"Longitude\"]].values"],
+    "m4_e6": ["La longueur parcourue est la 'Distance transect (m)' de la ligne dont le type d'indice est 'Fin'.", "fins = df[df[\"Type indice \"] == \"Fin\"].set_index(\"Transec N°\")[\"Distance transect (m)\"], puis divise par 1000.", "sans_fin : les transects de df[\"Transec N°\"].unique() absents de L_km.index."],
+    "m4_e7": ["Filtre les nids de gorille, puis .groupby(\"Transec N°\").size().", "Les transects sans nid manquent : .reindex(L_km.index, fill_value=0) les ajoute avec 0 (et retire T27).", "Divise par L_km : pandas aligne automatiquement les transects."],
+    "m4_e8": ["Additionne les nids par strate et les km par strate séparément, puis divise.", "Il te faut la strate de chaque transect : df.drop_duplicates(\"Transec N°\").set_index(\"Transec N°\")[\"Strate/site\"]."],
+    "m4_e9": ["Même logique qu'à l'exercice 7, avec les lignes où Espèce_Fact_Nat1 vaut \"Homme\"."],
+    "m4_e10": ["Filtre les lignes dont le type d'indice est \"Nid\", puis .isna().sum() sur la distance perpendiculaire."],
 }
-
 
 def indice(exercice, niveau=1):
     """Affiche un indice. Augmente le niveau si tu bloques encore."""

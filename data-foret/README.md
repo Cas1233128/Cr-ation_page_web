@@ -6,15 +6,17 @@ Chaque module est un notebook Jupyter. Tu écris le code toi-même, une fonction
 
 ## Les modules
 
-| # | Module | Ce que tu apprends | Statut |
+| # | Module | Ce que tu apprends | Ouvrir |
 |---|---|---|---|
-| 1 | `01_bases_python.ipynb` | Variables, listes, boucles, conditions, fonctions, dictionnaires | Prêt |
-| 2 | `02_nettoyage_inventaire.ipynb` | pandas : charger, diagnostiquer et nettoyer un inventaire réel en désordre | Prêt |
-| 3 | `03_dendrometrie_carbone.ipynb` | G, N, essences dominantes, imputation, allométrie de Chave (2014), carbone | Prêt |
-| 4 | Statistiques appliquées | Comparer des zones, intervalles de confiance, erreur d'échantillonnage d'un inventaire (le lien avec ton bootcamp) | À construire |
-| 5 | Modélisation | Régression hauteur-diamètre, validation, premier modèle prédictif | À construire |
-| 6 | Pièges photographiques | Taux de détection, activité de la faune, cartes de présence | À construire |
-| 7 | Perte de couvert forestier | Données satellitaires (Global Forest Change), raster, analyse spatiale | À construire |
+| 1 | Bases de Python | Variables, listes, boucles, conditions, fonctions, dictionnaires | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/01_bases_python.ipynb) |
+| 2 | Nettoyer un inventaire | pandas : charger, diagnostiquer et nettoyer un inventaire en désordre | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/02_nettoyage_inventaire.ipynb) |
+| 3 | Dendrométrie et carbone | G, N, essences dominantes, imputation, allométrie de Chave (2014), carbone | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/03_dendrometrie_carbone.ipynb) |
+| 4 | Transects : taux de rencontre | Fiche au format du programme, effort, doublons cachés, coordonnées, taux par transect et par strate | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/04_transects_taux_rencontre.ipynb) |
+| 5 | Transects : densité et effectif | Fonction de détection, largeur effective, densité, taille de population | À construire |
+| 6 | Pièges photo : nettoyage et taux de capture | Export Camelot, effort réel, horodatages aberrants, événements indépendants | À construire |
+| 7 | Pièges photo : activité et occupation | Activité sur 24 h, chevauchement, occupation naïve puis modélisée | À construire |
+| 8 | Expliquer les variations | Corrélations, tests, GLM de Poisson et binomial négatif | À construire |
+| 9 | Perte de couvert forestier | Données satellitaires, analyse spatiale | À construire |
 
 Compte 3 à 4 heures par module. À 4 ou 5 heures par semaine, les trois premiers modules prennent environ 3 semaines.
 
@@ -22,14 +24,9 @@ Compte 3 à 4 heures par module. À 4 ou 5 heures par semaine, les trois premier
 
 **Option A : Google Colab (rien à installer, il faut un compte Google)**
 
-Dans un nouveau notebook Colab, exécute :
-
-```
-!git clone -b claude/quirky-keller-jhyoi0 https://github.com/Cas1233128/Cr-ation_page_web
-%cd Cr-ation_page_web/data-foret
-```
-
-Puis ouvre le module dans Colab via *Fichier › Ouvrir un notebook*. Attention : Colab efface les fichiers à la fin de chaque session. Télécharge tes notebooks complétés (*Fichier › Télécharger*).
+1. Clique sur « Ouvrir dans Colab » dans le tableau ci-dessus.
+2. Exécute la première cellule (bouton ▶). Elle télécharge seule les données et les vérifications.
+3. Pour garder ton travail : *Fichier › Enregistrer une copie dans Drive*. Sinon, Colab efface tout à la fermeture.
 
 **Option B : sur ton ordinateur (recommandé à terme)**
 
