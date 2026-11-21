@@ -334,6 +334,95 @@ def _m4_e10(nb):
     _exige(int(nb) == A4["nids_perp_manquante"], f"{nb} nids sans distance perpendiculaire, attendu {A4['nids_perp_manquante']} (compté sur toutes les lignes de nids, toutes espèces).")
 
 
+# ---------------------------------------------------------------- Module 0
+def _m0_e2(message):
+    _exige(isinstance(message, str), f"`message` doit être un texte (entre guillemets). Tu as donné un {type(message).__name__}.")
+    _exige(message == "Bonjour la forêt", f"`message` vaut {message!r}. Attendu exactement : 'Bonjour la forêt' (majuscule, accent, pas d'espace en trop).")
+
+
+def _m0_e3(nb_arbres, dhp, essence, vivant):
+    _exige(type(nb_arbres) is int and nb_arbres == 12, f"`nb_arbres` doit être le nombre entier 12 (type int). Tu as {nb_arbres!r} de type {type(nb_arbres).__name__}.")
+    _exige(type(dhp) is float and dhp == 45.5, f"`dhp` doit être le nombre décimal 45.5 (type float). Tu as {dhp!r} de type {type(dhp).__name__}.")
+    _exige(type(essence) is str and essence == "Iroko", f"`essence` doit être le texte 'Iroko' (type str). Tu as {essence!r}.")
+    _exige(vivant is True, f"`vivant` doit valoir True (type bool, sans guillemets, avec une majuscule). Tu as {vivant!r} de type {type(vivant).__name__}.")
+
+
+def _m0_e4(surface_m2, surface_ha):
+    _exige(surface_m2 == 5000, f"Surface en m² : {surface_m2}, attendu 5000 (50 × 100). La multiplication s'écrit *.")
+    _exige(_proche(surface_ha, 0.5), f"Surface en ha : {surface_ha}, attendu 0.5. Un hectare vaut 10 000 m².")
+
+
+def _m0_e5(lignes_completes, reste):
+    _exige(lignes_completes == 4, f"lignes_completes = {lignes_completes}, attendu 4. La division entière s'écrit // (deux barres).")
+    _exige(reste == 7, f"reste = {reste}, attendu 7. Le reste d'une division s'obtient avec %.")
+
+
+def _m0_e6(type_erreur, hauteur_affichee):
+    _exige(isinstance(type_erreur, str) and type_erreur.strip() == "NameError", f"Le nom de l'erreur est écrit en rouge dans la dernière ligne du message. Ce n'est pas {type_erreur!r}.")
+    _exige(hauteur_affichee == 30, "Une fois corrigé, le code doit afficher 30. Python distingue majuscules et minuscules : hauteur et Hauteur sont deux noms différents.")
+
+
+def _m0_e7(phrase):
+    att = "L'arbre Iroko mesure 45.5 cm"
+    _exige(isinstance(phrase, str), "`phrase` doit être un texte.")
+    _exige(phrase == att, f"Ta phrase : {phrase!r}\n   Attendue : {att!r}\n   Utilise une f-string : f\"... {{essence}} ... {{dhp}} ...\"")
+
+
+def _m0_e8(propre):
+    _exige(propre == "Ayous", f"Résultat : {propre!r}, attendu 'Ayous'. Il faut retirer les espaces (.strip()) ET mettre la majuscule (.capitalize()).")
+
+
+def _m0_e9(valeur):
+    _exige(isinstance(valeur, float), f"`valeur` doit être un nombre décimal (float). Tu as un {type(valeur).__name__} : as-tu utilisé float(...) ?")
+    _exige(valeur == 34.5, f"`valeur` vaut {valeur}, attendu 34.5.")
+
+
+def _m0_e10(est_gros, est_exploitable):
+    _exige(est_gros is False, f"`est_gros` vaut {est_gros!r}. 45.5 >= 60 est faux : on attend False.")
+    _exige(est_exploitable is False, f"`est_exploitable` vaut {est_exploitable!r}. Les deux conditions doivent être vraies (and) : on attend False.")
+
+
+def _m0_e11(categorie):
+    _exige(categorie == "gros", f"Pour un dhp de 72, `categorie` vaut {categorie!r}, attendu 'gros'. Vérifie l'ordre de tes conditions if / elif / else.")
+
+
+def _m0_e12(total_nids):
+    _exige(total_nids == 11, f"total_nids = {total_nids}, attendu 11. As-tu corrigé l'indentation pour que l'addition soit DANS la boucle ?")
+
+
+def _m0_e13(premier, dernier, n, placettes):
+    _exige(premier == "P01", f"premier = {premier!r}. En Python, le premier élément est à l'index 0 : liste[0].")
+    _exige(dernier == "P04", f"dernier = {dernier!r}. Le dernier élément s'obtient avec l'index -1.")
+    _exige(n == 4, f"n = {n}, attendu 4 (longueur AVANT l'ajout).")
+    _exige(list(placettes) == ["P01", "P02", "P03", "P04", "P05"], f"placettes = {placettes}. On attend la liste avec 'P05' ajouté à la fin.")
+
+
+def _m0_e14(total):
+    _exige(_proche(total, 186.5), f"total = {total}, attendu 186.5. Commence à 0 et ajoute chaque hauteur dans la boucle : total = total + h.")
+
+
+def _m0_e15(numeros):
+    _exige(list(numeros) == list(range(1, 21)), f"On attend la liste 1, 2, …, 20. range(1, 21) s'arrête AVANT 21. Tu as {list(numeros)[:3]}…{list(numeros)[-2:] if len(list(numeros)) else ''} ({len(list(numeros))} éléments).")
+
+
+def _m0_e16(d_sapelli, densites):
+    _exige(d_sapelli == 0.58, f"d_sapelli = {d_sapelli}, attendu 0.58.")
+    _exige(isinstance(densites, dict) and densites.get("Iroko") == 0.56, "Ajoute la clé 'Iroko' avec la valeur 0.56 au dictionnaire : densites['Iroko'] = 0.56.")
+    _exige(len(densites) == 3, f"Le dictionnaire doit contenir 3 essences, il en contient {len(densites)}.")
+
+
+def _m0_e17(en_metres):
+    _exige(callable(en_metres), "Passe la fonction elle-même, sans parenthèses.")
+    for cm in (250, 1000, 0, 35.5):
+        r = en_metres(cm)
+        _exige(r is not None, "Ta fonction ne renvoie rien : il manque return. (print affiche, mais ne renvoie pas.)")
+        _exige(_proche(r, cm / 100), f"en_metres({cm}) renvoie {r}, attendu {cm / 100}.")
+
+
+def _m0_e18(diametre):
+    _exige(_proche(diametre, 2 * math.sqrt(0.5 / math.pi) * 100, 1e-6), f"diametre = {diametre}. Attendu ≈ {2 * math.sqrt(0.5 / math.pi) * 100:.2f} cm. Rayon (m) = racine(g / π), diamètre (cm) = 2 × rayon × 100.")
+
+
 _VERIFS = {k[1:]: v for k, v in globals().items() if k.startswith("_m") and callable(v)}
 
 
@@ -399,6 +488,23 @@ _INDICES = {
     "m4_e8": ["Additionne les nids par strate et les km par strate séparément, puis divise.", "Il te faut la strate de chaque transect : df.drop_duplicates(\"Transec N°\").set_index(\"Transec N°\")[\"Strate/site\"]."],
     "m4_e9": ["Même logique qu'à l'exercice 7, avec les lignes où Espèce_Fact_Nat1 vaut \"Homme\"."],
     "m4_e10": ["Filtre les lignes dont le type d'indice est \"Nid\", puis .isna().sum() sur la distance perpendiculaire."],
+    "m0_e2": ["Un texte s'écrit entre guillemets : message = \"...\"."],
+    "m0_e3": ["Entier : 12. Décimal : 45.5. Texte : \"Iroko\". Booléen : True (sans guillemets)."],
+    "m0_e4": ["surface_m2 = 50 * 100", "1 ha = 10 000 m², donc surface_ha = surface_m2 / 10000."],
+    "m0_e5": ["47 // 10 donne le quotient entier, 47 % 10 le reste."],
+    "m0_e6": ["Exécute la cellule fournie et lis la DERNIÈRE ligne rouge : elle commence par le nom de l'erreur.", "Le message dit que le nom 'Hauteur' n'est pas défini. Compare avec le nom de la variable créée."],
+    "m0_e7": ["Une f-string commence par f avant les guillemets : f\"texte {variable}\".", "phrase = f\"L'arbre {essence} mesure {dhp} cm\""],
+    "m0_e8": ["On peut enchaîner les méthodes : nom.strip().capitalize()."],
+    "m0_e9": ["float(\"34,5\") provoque ValueError : Python attend un point.", "Remplace d'abord la virgule : texte.replace(\",\", \".\"), puis float(...)."],
+    "m0_e10": ["est_gros = dhp >= 60", "est_exploitable = (dhp >= 60) and (essence == \"Iroko\")"],
+    "m0_e11": ["if dhp < 30: ... elif dhp < 60: ... else: ...", "Chaque branche contient categorie = \"...\", indentée de 4 espaces."],
+    "m0_e12": ["Une ligne fait partie de la boucle si elle est décalée de 4 espaces sous le for.", "Il faut décaler la ligne total_nids = total_nids + n."],
+    "m0_e13": ["premier = placettes[0], dernier = placettes[-1], n = len(placettes).", "Puis placettes.append(\"P05\"), APRÈS avoir calculé n."],
+    "m0_e14": ["total = 0, puis for h in hauteurs: et dans la boucle total = total + h."],
+    "m0_e15": ["numeros = list(range(début, fin)) : fin est exclue."],
+    "m0_e16": ["d_sapelli = densites[\"Sapelli\"]", "densites[\"Iroko\"] = 0.56 ajoute une nouvelle clé."],
+    "m0_e17": ["def en_metres(cm):\n    return ..."],
+    "m0_e18": ["import math, puis math.sqrt() et math.pi.", "rayon_m = math.sqrt(g / math.pi), puis diametre = 2 * rayon_m * 100."],
 }
 
 def indice(exercice, niveau=1):
