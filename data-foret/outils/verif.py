@@ -423,6 +423,120 @@ def _m0_e18(diametre):
     _exige(_proche(diametre, 2 * math.sqrt(0.5 / math.pi) * 100, 1e-6), f"diametre = {diametre}. Attendu ≈ {2 * math.sqrt(0.5 / math.pi) * 100:.2f} cm. Rayon (m) = racine(g / π), diamètre (cm) = 2 × rayon × 100.")
 
 
+# ---------------------------------------------------------------- Module 5
+A5 = _A["m5"]
+
+
+def _m5_e1(nids):
+    _exige(hasattr(nids, "shape"), "`nids` doit être un DataFrame filtré.")
+    _exige(len(nids) == A5["n_groupes"], f"{len(nids)} groupes de nids, attendu {A5['n_groupes']}. Garde les nids de gorille des transects dont la longueur est connue (index de L_km).")
+
+
+def _m5_e2(x):
+    _exige(len(x) == A5["n_distances"], f"{len(x)} distances, attendu {A5['n_distances']}. Retire les distances manquantes avec .dropna().")
+    _exige(_proche(float(x.mean()), A5["x_moy"], 1e-3), f"Distance moyenne {float(x.mean()):.3f}, attendu ≈ {A5['x_moy']} m. Les fiches sont en cm : divise par 100.")
+
+
+def _m5_e3(sigma):
+    _exige(_proche(sigma, A5["sigma"], 1e-3), f"sigma = {sigma}, attendu ≈ {A5['sigma']} m. Estimateur : racine carrée de la MOYENNE des distances au carré.")
+
+
+def _m5_e4(esw):
+    _exige(_proche(esw, A5["esw"], 1e-3), f"ESW = {esw}, attendu ≈ {A5['esw']} m. ESW = sigma × racine(π / 2).")
+
+
+def _m5_e5(D_groupes):
+    if _proche(D_groupes, A5["D_groupes"] / 1000, 1e-2, rel=True) or _proche(D_groupes, A5["D_groupes"] * 1000, 1e-2, rel=True):
+        raise _Echec("Erreur d'unités d'un facteur 1000 : L est en km, l'ESW en m. Convertis l'ESW en km avant de diviser.")
+    if _proche(D_groupes, A5["D_groupes"] * 2, 1e-2, rel=True):
+        raise _Echec("Résultat 2 fois trop grand : la bande observée s'étend des DEUX côtés du transect (2 × L × ESW).")
+    _exige(_proche(D_groupes, A5["D_groupes"], 1e-3, rel=True), f"D_groupes = {D_groupes}, attendu ≈ {A5['D_groupes']} groupes/km².")
+
+
+def _m5_e6(D_nids):
+    _exige(_proche(D_nids, A5["D_nids"], 1e-3, rel=True), f"D_nids = {D_nids}, attendu ≈ {A5['D_nids']} nids/km². Multiplie par la taille MOYENNE des groupes (colonne Nombre).")
+
+
+def _m5_e7(D_ind):
+    _exige(_proche(D_ind, A5["D_ind"], 1e-3, rel=True), f"D_ind = {D_ind}, attendu ≈ {A5['D_ind']} individus/km². D_ind = D_nids / (r × t).")
+
+
+def _m5_e8(N_strate):
+    _exige(hasattr(N_strate, "to_dict"), "`N_strate` doit être une Series indexée par strate.")
+    d = {str(k): float(v) for k, v in N_strate.to_dict().items()}
+    _exige(set(d) == set(A5["N_strate"]), f"On attend une valeur par strate : {sorted(A5['N_strate'])}.")
+    for k, v in A5["N_strate"].items():
+        _exige(abs(d[k] - v) <= max(1.0, v * 2e-3), f"{k} : {d[k]:.1f} individus, attendu ≈ {v}. N = densité de la strate × superficie de la strate (Sup_strate_km²).")
+
+
+def _m5_e9(bas, haut, N_total):
+    _exige(_proche(N_total, A5["N_total"], 2e-3, rel=True), f"N_total = {N_total}, attendu ≈ {A5['N_total']}.")
+    _exige(bas < N_total < haut, f"Ton intervalle [{bas:.0f} ; {haut:.0f}] ne contient pas l'estimation {N_total:.0f}. Vérifie les percentiles 2.5 et 97.5.")
+    _exige(0.15 * N_total < haut - bas < 3 * N_total, f"Largeur de l'intervalle : {haut - bas:.0f}. Ça ne semble pas plausible : vérifie que tu tires les TRANSECTS avec remise (replace=True) et que tu refais tout le calcul à chaque tirage.")
+
+
+# ---------------------------------------------------------------- Module 6
+A6 = _A["m6"]
+
+
+def _m6_e1(df):
+    _exige(hasattr(df, "shape") and df.shape == (A6["n_brut"], A6["n_col"]), f"Forme attendue {(A6['n_brut'], A6['n_col'])}. As-tu chargé donnees/camelot_export.csv ?")
+
+
+def _m6_e2(pp):
+    import pandas as pd
+    for col in ["Date/Time", "Session Start Date", "Session End Date"]:
+        _exige(pd.api.types.is_datetime64_any_dtype(pp[col]), f"La colonne {col!r} n'est pas au format date (type actuel : {pp[col].dtype}). Utilise pd.to_datetime().")
+
+
+def _m6_e3(nb_hors, pp):
+    _exige(int(nb_hors) == A6["nb_hors_session"], f"{nb_hors} photos hors session, attendu {A6['nb_hors_session']}. Une photo est hors session si elle est AVANT la date de pose ou APRÈS la date de retrait (compte le jour du retrait comme valide).")
+    _exige(len(pp) == A6["n_brut"] - A6["nb_hors_session"], f"Le tableau a {len(pp)} lignes après filtrage, attendu {A6['n_brut'] - A6['nb_hors_session']}.")
+
+
+def _m6_e4(effort):
+    _exige(hasattr(effort, "to_dict"), "`effort` doit être une Series indexée par station.")
+    d = {str(k): float(v) for k, v in effort.to_dict().items()}
+    total = sum(d.values())
+    if abs(total - A6["effort_naif_total"]) < 2:
+        raise _Echec(f"Tu obtiens {total:.0f} jours-pièges : c'est l'effort théorique (pose → retrait). Trois caméras sont tombées en panne avant le retrait. L'effort réel s'arrête à la dernière photo prise.")
+    for k, v in A6["effort"].items():
+        _exige(k in d and abs(d[k] - v) < 0.6, f"Station {k} : {d.get(k)} jours, attendu {v}. Jours-pièges = (jour de la dernière photo − jour de pose) + 1.")
+
+
+def _m6_e5(nb_indet, obs):
+    _exige(int(nb_indet) == A6["nb_indet"], f"{nb_indet} photos 'Indéterminé', attendu {A6['nb_indet']}.")
+    vus = set(obs["Species Common Name"].unique())
+    _exige(vus == set(A6["especes"]), f"Espèces restantes incorrectes. En trop : {sorted(vus - set(A6['especes']))}, manquantes : {sorted(set(A6['especes']) - vus)}. "
+           "Retire les photos vides (NaN) et 'Indéterminé', et harmonise les noms mal orthographiés.")
+    _exige(len(obs) == A6["n_photos_id"], f"{len(obs)} photos identifiées, attendu {A6['n_photos_id']}.")
+
+
+def _m6_e6(ev30):
+    n = len(ev30)
+    _exige(n != A6["n_photos_id"], "Tu as autant d'événements que de photos : chaque rafale compte encore plusieurs fois.")
+    _exige(n == A6["n_ev30"], f"{n} événements indépendants, attendu {A6['n_ev30']}. Trie par station, espèce et date, puis garde une photo si l'écart avec la précédente (même station, même espèce) dépasse 30 minutes ou si c'est la première.")
+
+
+def _m6_e7(rai):
+    _exige(hasattr(rai, "to_dict"), "`rai` doit être une Series indexée par espèce.")
+    d = {str(k): float(v) for k, v in rai.to_dict().items()}
+    for k, v in A6["rai"].items():
+        _exige(k in d and abs(d[k] - v) < 1e-3, f"{k} : RAI = {d.get(k)}, attendu ≈ {v}. RAI = événements / jours-pièges totaux × 100.")
+
+
+def _m6_e8(rai_gor):
+    _exige(hasattr(rai_gor, "to_dict"), "`rai_gor` doit être une Series indexée par station.")
+    d = {str(k): float(v) for k, v in rai_gor.to_dict().items()}
+    _exige(len(d) == len(A6["rai_gor"]), f"{len(d)} stations, attendu {len(A6['rai_gor'])}. Les stations sans gorille comptent, avec 0.")
+    for k, v in A6["rai_gor"].items():
+        _exige(abs(d.get(k, -1) - v) < 1e-3, f"Station {k} : {d.get(k)}, attendu ≈ {v}. Divise par l'effort DE LA STATION.")
+
+
+def _m6_e9(n_ev60):
+    _exige(int(n_ev60) == A6["n_ev60"], f"{n_ev60} événements avec un seuil de 60 min, attendu {A6['n_ev60']}.")
+
+
 _VERIFS = {k[1:]: v for k, v in globals().items() if k.startswith("_m") and callable(v)}
 
 
@@ -505,6 +619,24 @@ _INDICES = {
     "m0_e16": ["d_sapelli = densites[\"Sapelli\"]", "densites[\"Iroko\"] = 0.56 ajoute une nouvelle clé."],
     "m0_e17": ["def en_metres(cm):\n    return ..."],
     "m0_e18": ["import math, puis math.sqrt() et math.pi.", "rayon_m = math.sqrt(g / math.pi), puis diametre = 2 * rayon_m * 100."],
+    "m5_e1": ["Combine trois conditions avec & : espèce Gorille, type d'indice Nid, transect dans L_km.index (méthode .isin())."],
+    "m5_e2": ["x = nids[\"Distance perpendiculaire_cm\"].dropna() / 100"],
+    "m5_e3": ["Pour une fonction de détection semi-normale sans troncature, l'estimateur du maximum de vraisemblance de sigma est racine(moyenne(x²)).", "np.sqrt((x ** 2).mean())"],
+    "m5_e4": ["esw = sigma * np.sqrt(np.pi / 2)"],
+    "m5_e5": ["D = n / (2 × L × ESW), avec L en km et ESW en km (esw / 1000).", "n = len(nids), L = L_km.sum()."],
+    "m5_e6": ["D_nids = D_groupes * nids[\"Nombre\"].mean()"],
+    "m5_e7": ["D_ind = D_nids / (r * t) avec r = 1.0 et t = 90."],
+    "m5_e8": ["Nombre de groupes par strate : compte par transect (reindex avec 0), puis groupby(strate).sum(). Fais pareil pour L.", "D_strate = n_strate / (2 * L_strate * esw / 1000) * taille_moy / (r * t), puis N = D_strate * superficie."],
+    "m5_e9": ["Dans une boucle de 1000 tours : tire des transects avec remise, rng.choice(L_km.index, size=len(L_km), replace=True).", "Pour chaque tirage, recalcule N_total en utilisant les nids et les longueurs des transects tirés (un transect tiré deux fois compte deux fois).", "Termine avec np.percentile(resultats, [2.5, 97.5])."],
+    "m6_e1": ["pd.read_csv(\"donnees/camelot_export.csv\", low_memory=False)"],
+    "m6_e2": ["Pour chaque colonne de date : pp[col] = pd.to_datetime(pp[col])."],
+    "m6_e3": ["hors = (pp[\"Date/Time\"] < pp[\"Session Start Date\"]) | (pp[\"Date/Time\"] > pp[\"Session End Date\"] + pd.Timedelta(days=1))"],
+    "m6_e4": ["Par station : date de pose (première valeur de Session Start Date) et date de la dernière photo (max de Date/Time).", "(derniere.dt.normalize() - debut).dt.days + 1 donne des jours entiers, jour de pose compris."],
+    "m6_e5": ["Une photo vide a un nom d'espèce NaN : .notna() les repère.", "Regarde pp[\"Species Common Name\"].value_counts() pour trouver les fautes d'orthographe."],
+    "m6_e6": ["Trie avec .sort_values([\"Trap Station Name\", \"Species Common Name\", \"Date/Time\"]).", "Écart avec la photo précédente du même groupe : obs.groupby([station, espèce])[\"Date/Time\"].diff().", "Garde les lignes où l'écart est NaN (première photo) ou > pd.Timedelta(minutes=30)."],
+    "m6_e7": ["ev30.groupby(\"Species Common Name\").size() / effort.sum() * 100"],
+    "m6_e8": ["Compte les événements de gorille par station, .reindex(effort.index, fill_value=0), puis divise par effort et multiplie par 100."],
+    "m6_e9": ["Refais le calcul de l'exercice 6 avec pd.Timedelta(minutes=60)."],
 }
 
 def indice(exercice, niveau=1):
