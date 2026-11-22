@@ -201,7 +201,7 @@ function rendre() {
         det.append(el("div", { class: "corps" },
           el("div", { class: "ligne" },
             el("div", { class: "champ" }, el("label", { for: "statut-" + m.id, text: "Statut" }), statut),
-            el("div", { class: "champ" }, el("label", { for: "min-" + m.id, text: "Minutes passées" }), minutes),
+            el("div", { class: "champ" }, el("label", { for: "min-" + m.id, text: "Minutes passées (2 h 30 = 150)" }), minutes),
             m.f ? el("a", { class: "btn ghost", href: COLAB + m.f, target: "_blank", rel: "noopener", text: "Ouvrir dans Colab" }) : null,
             el("span", { class: "duree", text: "Durée indicative : " + m.h })),
           el("div", { class: "champ" }, el("label", { for: "bloc-" + m.id, text: "Où as-tu bloqué ?" }), blocage),
