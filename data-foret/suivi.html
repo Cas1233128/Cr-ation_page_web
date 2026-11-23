@@ -79,7 +79,7 @@ footer { color: var(--muted); font-size: 13.5px; display: grid; gap: 4px; }
     <h1>Carnet Data Forêt</h1>
     <p class="lede">Python et data science appliqués aux inventaires forestiers et au suivi de la faune du bassin du Congo. Note ici ta progression, ton temps et tes blocages : Claude peut les lire quand tu lui demandes d'ajuster le parcours.</p>
     <div class="bilan" aria-live="polite">
-      <div><b id="b-faits">0 / 8</b><span>modules terminés</span></div>
+      <div><b id="b-faits">0 / 11</b><span>modules terminés</span></div>
       <div><b id="b-temps">0 h 00</b><span>de pratique notée</span></div>
       <div><b id="b-blocages">0</b><span>blocages signalés</span></div>
     </div>
@@ -118,10 +118,13 @@ const ETAPES = [
   { titre: "Inventaire forestier", mods: [
     { id: "m1b", n: "1b", nom: "Prise en main de pandas", desc: "Tableaux, colonnes, filtres, .loc, groupby, aide-mémoire", h: "1 h 30", f: "01b_prise_en_main_pandas.ipynb" },
     { id: "m2", n: 2, nom: "Nettoyer un inventaire", desc: "pandas, virgules, noms d'essences, doublons, placette en millimètres", h: "3 à 4 h", f: "02_nettoyage_inventaire.ipynb" },
+    { id: "m2b", n: "2b", nom: "Outils : numpy, fusion, graphiques", desc: "np.floor, clip, idxmax, merge, transform, matplotlib", h: "1 h 15", f: "02b_outils_numpy_fusion_graphiques.ipynb" },
     { id: "m3", n: 3, nom: "Dendrométrie et carbone", desc: "G, N, imputation des hauteurs, équation de Chave (2014), carbone", h: "3 à 4 h", f: "03_dendrometrie_carbone.ipynb" } ] },
   { titre: "Suivi de la faune", mods: [
+    { id: "m3b", n: "3b", nom: "Outils : fiches de terrain", desc: "Index, reindex, isin, tirages aléatoires, premier bootstrap", h: "1 h 15", f: "03b_outils_tableaux_terrain.ipynb" },
     { id: "m4", n: 4, nom: "Transects : taux de rencontre", desc: "Fiche du programme, effort, doublons cachés, coordonnées inversées", h: "3 à 4 h", f: "04_transects_taux_rencontre.ipynb" },
     { id: "m5", n: 5, nom: "Transects : densité et effectif", desc: "Distance sampling des nids de gorille, ESW, bootstrap", h: "3 h", f: "05_transects_densite.ipynb" },
+    { id: "m5b", n: "5b", nom: "Outils : dates et heures", desc: "to_datetime, Timedelta, .dt, écarts par groupe", h: "1 h 15", f: "05b_outils_dates.ipynb" },
     { id: "m6", n: 6, nom: "Pièges photo : taux de capture", desc: "Export Camelot, effort réel, événements indépendants, RAI", h: "3 h", f: "06_pieges_photo_taux_capture.ipynb" },
     { id: "m7", n: 7, nom: "Pièges photo : activité et occupation", desc: "Activité sur 24 h, chevauchement, occupation", h: "3 h", f: null },
     { id: "m8", n: 8, nom: "Expliquer les variations", desc: "Corrélations, tests, GLM de Poisson et binomial négatif", h: "3 à 4 h", f: null } ] },

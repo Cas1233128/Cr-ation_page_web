@@ -621,7 +621,175 @@ def _mp_e14(nb_doublons, saisie_propre):
     _exige(len(saisie_propre) == 12, f"Après suppression on attend 12 lignes, tu en as {len(saisie_propre)}.")
 
 
-_VERIFS = {k[1:]: v for k, v in globals().items() if k.startswith("_m") and callable(v)}
+# ---------------------------------------------------------------- Modules de prise en main 2b, 3b, 5b
+def _ex():
+    from outils import exemples
+    return exemples
+
+
+def _liste_proche(a, b, tol=1e-6):
+    a = list(a)
+    return len(a) == len(b) and all((x != x and y != y) or _proche(x, y, tol) for x, y in zip(a, b))
+
+
+# --- 2b : numpy, fusion, transform, graphiques
+def _o_e1(arbres):
+    _exige("classe" in arbres.columns, "Crée la colonne arbres[\"classe\"].")
+    _exige(_liste_proche(arbres["classe"], [40, 80, 20, 60, 50, 30, 40, 100, 50, 10, 70, 60]), f"Classes obtenues : {list(arbres['classe'])}. np.floor(arbres[\"dhp\"] / 10) * 10 arrondit à la dizaine inférieure.")
+
+
+def _o_e2(classe60):
+    _exige(_liste_proche(classe60, [40, 60, 20, 60, 50, 30, 40, 60, 50, 10, 60, 60]), "On attend les classes plafonnées à 60 : .clip(upper=60) remplace toute valeur au-dessus de 60 par 60.")
+
+
+def _o_e3(plus_gros, placette_max):
+    _exige(plus_gros == "A08", f"plus_gros = {plus_gros!r}. .idxmax() donne l'INDEX (le numéro de ligne) du maximum ; il faut ensuite lire la colonne arbre de cette ligne avec .loc.")
+    _exige(int(placette_max) == 2, f"placette_max = {placette_max}. Calcule d'abord le dhp moyen par placette (groupby), puis .idxmax() sur ce résultat.")
+
+
+def _o_e4(fusion, nb_sans_densite):
+    _exige(len(fusion) == 12, f"La fusion a {len(fusion)} lignes au lieu de 12. Avec how=\"left\", tous les arbres doivent être gardés.")
+    _exige("densite_bois" in fusion.columns, "La colonne densite_bois manque : as-tu fusionné sur la colonne essence (on=\"essence\") ?")
+    _exige(int(nb_sans_densite) == 2, f"{nb_sans_densite} arbres sans densité, on en attend 2 (les Tali, absents du tableau des espèces).")
+
+
+def _o_e5(n_inner):
+    _exige(int(n_inner) == 10, f"{n_inner} lignes. Avec how=\"inner\", les arbres dont l'essence est absente du second tableau disparaissent sans prévenir : on attend 10.")
+
+
+def _o_e6(arbres):
+    att = _ex().arbres().groupby("essence")["dhp"].transform("mean")
+    _exige("dhp_moy_essence" in arbres.columns, "Crée la colonne arbres[\"dhp_moy_essence\"].")
+    _exige(len(arbres) == 12 and _liste_proche(arbres["dhp_moy_essence"], list(att)), "On attend, sur CHAQUE ligne, la moyenne de son essence : groupby(...)[...].transform(\"mean\") garde la taille du tableau, contrairement à .mean().")
+
+
+def _o_e7(hauteur):
+    _exige(int(hauteur.isna().sum()) == 0, "Il reste des hauteurs manquantes.")
+    _exige(_proche(hauteur.iloc[2], 36.2) and _proche(hauteur.iloc[6], 33.0), f"Valeurs imputées : A03 = {hauteur.iloc[2]}, A07 = {hauteur.iloc[6]}. Attendu 36.2 et 33.0 : la médiane des hauteurs DE LEUR PLACETTE.")
+
+
+def _o_e8(ax):
+    _exige(hasattr(ax, "patches"), "Passe l'objet ax créé par fig, ax = plt.subplots().")
+    _exige(len(ax.patches) == 5, f"Ton histogramme a {len(ax.patches)} barres, on en attend 5 (bins=5).")
+    _exige(ax.get_xlabel().strip() != "", "Un graphique sans légende d'axe est illisible : ajoute ax.set_xlabel(\"DHP (cm)\").")
+
+
+def _o_e9(ax):
+    _exige(hasattr(ax, "patches") and len(ax.patches) == 4, "On attend 4 barres, une par essence.")
+
+
+def _o_e10(ax):
+    _exige(hasattr(ax, "collections") and len(ax.collections) >= 1, "Aucun nuage de points : utilise ax.scatter(x, y).")
+    _exige(ax.get_xlabel().strip() and ax.get_ylabel().strip(), "Nomme les deux axes (set_xlabel et set_ylabel).")
+
+
+# --- 3b : tableaux de terrain
+def _t_e1(n_transects, types):
+    _exige(int(n_transects) == 5, f"{n_transects} transects, on en attend 5 : .nunique() compte les valeurs différentes.")
+    _exige(sorted(types) == ["Crotte", "Debut", "Fin", "Nid", "Piège"], f"Types trouvés : {sorted(types)}. .unique() renvoie chaque valeur une seule fois.")
+
+
+def _t_e2(nb_doublons, fiche):
+    _exige(int(nb_doublons) == 1, f"{nb_doublons} doublon(s). Les ID sont tous différents : cherche les doublons sur toutes les colonnes SAUF ID (subset=).")
+    _exige(len(fiche) == 17, f"{len(fiche)} lignes après suppression, attendu 17.")
+
+
+def _t_e3(fiche):
+    _exige(float(fiche["Longitude"].min()) > 10 and float(fiche["Latitude"].max()) < 5, "La ligne inversée n'est pas corrigée (longitude vers 14-15°, latitude vers 2°).")
+
+
+def _t_e4(indices):
+    _exige(sorted(indices["ID"]) == [2, 3, 4, 7, 11], "On attend les nids et les crottes (5 lignes) : fiche[fiche[\"Type\"].isin([\"Nid\", \"Crotte\"])].")
+
+
+def _t_e5(L_km):
+    _exige(hasattr(L_km, "to_dict") and L_km.to_dict() == {"T1": 2.0, "T2": 1.5, "T3": 2.0, "T4": 2.5, "T5": 1.0}, "On attend une Series indexée par transect : longueur de la ligne Fin, en km. .set_index(\"Transect\") met les noms de transects en index.")
+
+
+def _t_e6(n_nids):
+    d = n_nids.to_dict() if hasattr(n_nids, "to_dict") else {}
+    if set(d) == {"T1", "T3"}:
+        raise _Echec("Il manque les transects sans nid. .reindex(L_km.index, fill_value=0) ajoute T2, T4 et T5 avec 0.")
+    _exige(d == {"T1": 2, "T2": 0, "T3": 1, "T4": 0, "T5": 0}, f"Résultat : {d}. Attendu T1 : 2, T3 : 1, les autres à 0 (doublon déjà retiré).")
+
+
+def _t_e7(taux):
+    d = taux.to_dict() if hasattr(taux, "to_dict") else {}
+    _exige(set(d) == {"T1", "T2", "T3", "T4", "T5"} and _proche(d["T1"], 1.0) and _proche(d["T3"], 0.5) and _proche(d["T2"], 0), f"Résultat : {d}. Divise n_nids par L_km : pandas associe chaque transect à sa longueur grâce à l'index.")
+
+
+def _t_e8(taux_strate):
+    d = taux_strate.to_dict() if hasattr(taux_strate, "to_dict") else {}
+    _exige(set(d) == {"Parc", "Tampon"} and _proche(d["Parc"], 2 / 3.5, 1e-6) and _proche(d["Tampon"], 1 / 5.5, 1e-6), f"Résultat : {d}. Parc : 2 nids / 3,5 km ; Tampon : 1 nid / 5,5 km. Additionne nids et km par strate, puis divise.")
+
+
+def _t_e9(tirage):
+    import numpy as np
+    att = np.random.default_rng(42).choice(["T1", "T2", "T3", "T4", "T5"], size=5, replace=True).tolist()
+    _exige(list(tirage) == att, f"Tirage obtenu : {list(tirage)}. Avec la graine 42 et les mêmes arguments, on doit obtenir {att}. Crée le générateur juste avant le tirage.")
+
+
+def _t_e10(moyenne, bas, haut):
+    import numpy as np
+    v = [3, 0, 5, 1, 0, 2, 4, 0, 1, 2]
+    rng = np.random.default_rng(1)
+    res = [rng.choice(v, size=len(v), replace=True).mean() for _ in range(1000)]
+    b, h = np.percentile(res, [2.5, 97.5])
+    _exige(_proche(moyenne, 1.8), f"moyenne = {moyenne}, attendu 1.8.")
+    _exige(_proche(bas, b, 1e-9) and _proche(haut, h, 1e-9), f"Intervalle [{bas} ; {haut}], attendu [{b} ; {h}]. Respecte exactement l'énoncé : graine 1, 1000 tirages, rng.choice(valeurs, size=len(valeurs), replace=True).mean().")
+
+
+# --- 5b : dates
+def _d_e1(photos):
+    import pandas as pd
+    _exige(pd.api.types.is_datetime64_any_dtype(photos["date"]), f"La colonne date est encore du type {photos['date'].dtype}. Utilise pd.to_datetime().")
+
+
+def _d_e2(n):
+    if int(n) == 6:
+        raise _Echec("Tu comptes aussi la photo datée de 2000 ? Non : 2000 est avant 2026. Vérifie plutôt que tu as bien converti la colonne en dates à l'exercice 1.")
+    _exige(int(n) == 5, f"{n} photos, on en attend 5 (prises le 3 février 2026 ou après).")
+
+
+def _d_e3(nb_hors, valides):
+    _exige(int(nb_hors) == 1, f"{nb_hors} photo(s) hors session, attendu 1 (celle de 2000).")
+    _exige(len(valides) == 10, f"`valides` a {len(valides)} lignes, attendu 10.")
+
+
+def _d_e4(duree):
+    _exige(hasattr(duree, "tolist") and duree.tolist() == [30, 30], f"Durées obtenues : {list(duree) if hasattr(duree, 'tolist') else duree}. (retrait − pose) donne un Timedelta ; .dt.days le convertit en nombre de jours.")
+
+
+def _d_e5(nb_nuit):
+    _exige(int(nb_nuit) == 3, f"{nb_nuit} photos de nuit, on en attend 3 (avant 6 h ou à partir de 18 h, sur les photos valides).")
+
+
+def _d_e6(nb_jours):
+    _exige(int(nb_jours) == 5, f"{nb_jours} jours, on en attend 5. .dt.normalize() ramène chaque date à minuit, puis .nunique() compte les jours différents.")
+
+
+def _d_e7(ecarts):
+    v = list(ecarts)
+    _exige(len(v) == 3 and v[0] != v[0] and _proche(v[1], 2.5) and _proche(v[2], 52.5), f"Écarts obtenus : {v}. Attendu [NaN, 2.5, 52.5] : .diff() puis .dt.total_seconds() / 60.")
+
+
+def _d_e8(nb_premieres):
+    _exige(int(nb_premieres) == 4, f"{nb_premieres}, on en attend 4 : une première photo (écart NaT) par couple station-espèce.")
+
+
+def _d_e9(n_evenements):
+    _exige(int(n_evenements) == 6, f"{n_evenements} événements, on en attend 6. Garde une photo si son écart est NaT (première du groupe) OU supérieur à 30 minutes.")
+
+
+def _d_e10(resume):
+    import pandas as pd
+    _exige(hasattr(resume, "loc") and {"premiere", "derniere"} <= set(resume.columns), "On attend un tableau avec les colonnes premiere et derniere, indexé par station.")
+    _exige(resume.loc["CT1", "derniere"] == pd.Timestamp("2026-02-05 14:00:00") and resume.loc["CT2", "premiere"] == pd.Timestamp("2026-02-03 10:00:00"),
+           "Valeurs incorrectes. .agg(premiere=(\"date\", \"min\"), derniere=(\"date\", \"max\")) sur les photos VALIDES (photos vides comprises).")
+
+
+import re as _re
+_VERIFS = {k[1:]: v for k, v in globals().items() if _re.fullmatch(r"_[a-z0-9]+_e\d+", k) and callable(v)}
 
 
 def verifier(exercice, *valeurs):
@@ -735,6 +903,36 @@ _INDICES = {
     "mp_e12": ["Condition : releve[\"placette\"] == 2.", ".loc[lignes, colonne] sélectionne une case ou un groupe de cases ; on peut leur affecter une valeur avec =."],
     "mp_e13": ["groupby(\"essence\") regroupe, [\"dhp\"] choisit la colonne, .mean() calcule la moyenne de chaque groupe."],
     "mp_e14": ["saisie.duplicated().sum() compte, saisie.drop_duplicates() supprime."],
+    "o_e1": ["np.floor arrondit à l'entier inférieur, élément par élément.", "arbres[\"classe\"] = np.floor(arbres[\"dhp\"] / 10) * 10"],
+    "o_e2": ["arbres[\"classe\"].clip(upper=60)"],
+    "o_e3": ["i = arbres[\"dhp\"].idxmax() donne le numéro de ligne ; arbres.loc[i, \"arbre\"] lit le nom.", "arbres.groupby(\"placette\")[\"dhp\"].mean().idxmax()"],
+    "o_e4": ["fusion = arbres.merge(especes, on=\"essence\", how=\"left\")", "fusion[\"densite_bois\"].isna().sum()"],
+    "o_e5": ["len(arbres.merge(especes, on=\"essence\", how=\"inner\"))"],
+    "o_e6": ["arbres.groupby(\"essence\")[\"dhp\"].transform(\"mean\")"],
+    "o_e7": ["La médiane de chaque placette, ligne par ligne : arbres.groupby(\"placette\")[\"hauteur\"].transform(\"median\").", "arbres[\"hauteur\"].fillna(...) remplit seulement les trous."],
+    "o_e8": ["fig, ax = plt.subplots() crée un graphique vide ; ax.hist(arbres[\"dhp\"], bins=5) le remplit.", "Puis ax.set_xlabel(\"DHP (cm)\") et ax.set_ylabel(\"Nombre d'arbres\")."],
+    "o_e9": ["comptes = arbres[\"essence\"].value_counts(), puis ax.barh(comptes.index, comptes.values)."],
+    "o_e10": ["ax.scatter(arbres[\"dhp\"], arbres[\"hauteur\"]), puis les deux set_..label."],
+    "t_e1": ["fiche[\"Transect\"].nunique() ; fiche[\"Type\"].unique()"],
+    "t_e2": ["cols = [c for c in fiche.columns if c != \"ID\"] ; fiche.duplicated(subset=cols).sum()"],
+    "t_e3": ["inv = fiche[\"Longitude\"] < fiche[\"Latitude\"]", "fiche.loc[inv, [\"Longitude\", \"Latitude\"]] = fiche.loc[inv, [\"Latitude\", \"Longitude\"]].values  (.values évite que pandas réaligne les colonnes par leur nom)"],
+    "t_e4": ["fiche[\"Type\"].isin([\"Nid\", \"Crotte\"]) donne True quand la valeur est dans la liste."],
+    "t_e5": ["fins = fiche[fiche[\"Type\"] == \"Fin\"]", "fins.set_index(\"Transect\")[\"Position_m\"] / 1000"],
+    "t_e6": ["Filtre les nids, puis .groupby(\"Transect\").size().", ".reindex(L_km.index, fill_value=0)"],
+    "t_e7": ["taux = n_nids / L_km"],
+    "t_e8": ["strate = fiche.drop_duplicates(\"Transect\").set_index(\"Transect\")[\"Strate\"]", "n_nids.groupby(strate).sum() / L_km.groupby(strate).sum()"],
+    "t_e9": ["rng = np.random.default_rng(42) ; rng.choice(liste, size=5, replace=True)"],
+    "t_e10": ["Dans une boucle for _ in range(1000) : tirage = rng.choice(valeurs, size=len(valeurs), replace=True), puis resultats.append(tirage.mean()).", "np.percentile(resultats, [2.5, 97.5]) renvoie les deux bornes."],
+    "d_e1": ["photos[\"date\"] = pd.to_datetime(photos[\"date\"])"],
+    "d_e2": ["On peut comparer une colonne de dates à une date écrite en texte : photos[\"date\"] >= \"2026-02-03\".", "Une deuxième condition exclut l'an 2000 : photos[\"date\"] < \"2027-01-01\"."],
+    "d_e3": ["hors = (photos[\"date\"] < debut) | (photos[\"date\"] > fin + pd.Timedelta(days=1))", "valides = photos[~hors]  (~ inverse True et False)"],
+    "d_e4": ["Convertis d'abord pose et retrait avec pd.to_datetime, puis (sessions[\"retrait\"] - sessions[\"pose\"]).dt.days."],
+    "d_e5": ["h = valides[\"date\"].dt.hour", "((h < 6) | (h >= 18)).sum()"],
+    "d_e6": ["valides[\"date\"].dt.normalize().nunique()"],
+    "d_e7": ["g = valides[(valides[\"station\"] == \"CT1\") & (valides[\"espece\"] == \"Gorille\")].sort_values(\"date\")", "g[\"date\"].diff().dt.total_seconds() / 60"],
+    "d_e8": ["Trie animaux par station, espece, date ; puis animaux.groupby([\"station\", \"espece\"])[\"date\"].diff().", ".isna().sum() compte les NaT."],
+    "d_e9": ["garder = ecart.isna() | (ecart > pd.Timedelta(minutes=30))", "garder.sum()"],
+    "d_e10": ["valides.groupby(\"station\").agg(premiere=(\"date\", \"min\"), derniere=(\"date\", \"max\"))"],
 }
 
 def indice(exercice, niveau=1):

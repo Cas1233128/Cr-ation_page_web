@@ -12,13 +12,18 @@ Chaque module est un notebook Jupyter. Tu écris le code toi-même, une fonction
 | 1 | Bases de Python appliquées | Combiner ces notions sur des calculs forestiers complets | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/01_bases_python.ipynb) |
 | 1b | Prise en main de pandas | Tableaux, colonnes, filtres, .loc, groupby, une notion à la fois, avec un aide-mémoire | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/01b_prise_en_main_pandas.ipynb) |
 | 2 | Nettoyer un inventaire | pandas : charger, diagnostiquer et nettoyer un inventaire en désordre | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/02_nettoyage_inventaire.ipynb) |
+| 2b | Outils : numpy, fusion, graphiques | np.floor, clip, idxmax, merge, transform, matplotlib | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/02b_outils_numpy_fusion_graphiques.ipynb) |
 | 3 | Dendrométrie et carbone | G, N, essences dominantes, imputation, allométrie de Chave (2014), carbone | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/03_dendrometrie_carbone.ipynb) |
+| 3b | Outils : fiches de terrain | unique, isin, index, reindex, set_index, hasard reproductible, premier bootstrap | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/03b_outils_tableaux_terrain.ipynb) |
 | 4 | Transects : taux de rencontre | Fiche au format du programme, effort, doublons cachés, coordonnées, taux par transect et par strate | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/04_transects_taux_rencontre.ipynb) |
 | 5 | Transects : densité et effectif | Distance sampling des nids de gorille : fonction de détection, ESW, densité, effectif par strate, IC par bootstrap, équivalent R | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/05_transects_densite.ipynb) |
+| 5b | Outils : dates et heures | to_datetime, Timedelta, .dt, diff par groupe, agg | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/05b_outils_dates.ipynb) |
 | 6 | Pièges photo : taux de capture | Export Camelot (71 colonnes), dates aberrantes, effort réel, événements indépendants, RAI, sensibilité au seuil | [Ouvrir dans Colab](https://colab.research.google.com/github/Cas1233128/Cr-ation_page_web/blob/claude/quirky-keller-jhyoi0/data-foret/06_pieges_photo_taux_capture.ipynb) |
 | 7 | Pièges photo : activité et occupation | Activité sur 24 h, chevauchement, occupation naïve puis modélisée | À construire |
 | 8 | Expliquer les variations | Corrélations, tests, GLM de Poisson et binomial négatif | À construire |
 | 9 | Perte de couvert forestier | Données satellitaires, analyse spatiale | À construire |
+
+**Règle du parcours :** toute bibliothèque ou famille de fonctions nouvelle est présentée dans un module de prise en main (lettre b) juste avant le module qui l'utilise. Les modules 7 et 8 auront les leurs (statistiques circulaires, scipy, statsmodels).
 
 Compte 3 à 4 heures par module. À 4 ou 5 heures par semaine, les trois premiers modules prennent environ 3 semaines.
 
