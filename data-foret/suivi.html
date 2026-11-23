@@ -79,7 +79,7 @@ footer { color: var(--muted); font-size: 13.5px; display: grid; gap: 4px; }
     <h1>Carnet Data Forêt</h1>
     <p class="lede">Python et data science appliqués aux inventaires forestiers et au suivi de la faune du bassin du Congo. Note ici ta progression, ton temps et tes blocages : Claude peut les lire quand tu lui demandes d'ajuster le parcours.</p>
     <div class="bilan" aria-live="polite">
-      <div><b id="b-faits">0 / 7</b><span>modules terminés</span></div>
+      <div><b id="b-faits">0 / 8</b><span>modules terminés</span></div>
       <div><b id="b-temps">0 h 00</b><span>de pratique notée</span></div>
       <div><b id="b-blocages">0</b><span>blocages signalés</span></div>
     </div>
@@ -116,6 +116,7 @@ const ETAPES = [
     { id: "m0", n: 0, nom: "Prise en main de Python", desc: "Types, opérateurs, texte, erreurs, conditions, listes, boucles, fonctions", h: "2 h", f: "00_prise_en_main_python.ipynb" },
     { id: "m1", n: 1, nom: "Bases de Python appliquées", desc: "Surface terrière, classes de diamètre, arbres exploitables", h: "2 à 3 h", f: "01_bases_python.ipynb" } ] },
   { titre: "Inventaire forestier", mods: [
+    { id: "m1b", n: "1b", nom: "Prise en main de pandas", desc: "Tableaux, colonnes, filtres, .loc, groupby, aide-mémoire", h: "1 h 30", f: "01b_prise_en_main_pandas.ipynb" },
     { id: "m2", n: 2, nom: "Nettoyer un inventaire", desc: "pandas, virgules, noms d'essences, doublons, placette en millimètres", h: "3 à 4 h", f: "02_nettoyage_inventaire.ipynb" },
     { id: "m3", n: 3, nom: "Dendrométrie et carbone", desc: "G, N, imputation des hauteurs, équation de Chave (2014), carbone", h: "3 à 4 h", f: "03_dendrometrie_carbone.ipynb" } ] },
   { titre: "Suivi de la faune", mods: [

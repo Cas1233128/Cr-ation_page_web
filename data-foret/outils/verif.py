@@ -537,6 +537,90 @@ def _m6_e9(n_ev60):
     _exige(int(n_ev60) == A6["n_ev60"], f"{n_ev60} événements avec un seuil de 60 min, attendu {A6['n_ev60']}.")
 
 
+# ---------------------------------------------------------------- Module 1b (pandas)
+def _arbres_ref():
+    import pandas as pd
+    return pd.DataFrame({
+        "arbre": [f"A{i:02d}" for i in range(1, 13)],
+        "placette": [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+        "essence": ["Ayous", "Sapelli", "Ayous", "Iroko", "Sapelli", "Ayous", "Tali", "Sapelli", "Iroko", "Ayous", "Tali", "Ayous"],
+        "dhp": [42.0, 85.5, 23.4, 61.0, 51.2, 37.8, 48.2, 102.0, 55.1, 18.6, 74.3, 66.9],
+        "hauteur": [28.5, 41.0, None, 36.2, 33.0, 26.4, None, 44.8, 35.0, 17.2, 38.9, 37.5],
+    })
+
+
+def _mp_e1(n_lignes, n_colonnes):
+    _exige(n_lignes == 12 and n_colonnes == 5, f"Tu donnes {n_lignes} lignes et {n_colonnes} colonnes. arbres.shape renvoie (lignes, colonnes) : on attend 12 et 5.")
+
+
+def _mp_e2(colonnes):
+    _exige(list(colonnes) == ["arbre", "placette", "essence", "dhp", "hauteur"], f"On attend la liste des 5 noms de colonnes, dans l'ordre. Tu as {list(colonnes)}.")
+
+
+def _mp_e3(dhps, dmax):
+    _exige(hasattr(dhps, "tolist") and dhps.tolist() == _arbres_ref()["dhp"].tolist(), "`dhps` doit être la colonne dhp : arbres[\"dhp\"] (un seul crochet, avec le nom entre guillemets).")
+    _exige(dmax == 102.0, f"dmax = {dmax}, attendu 102.0. Une colonne a des méthodes : .max(), .min(), .mean(), .sum()…")
+
+
+def _mp_e4(sous):
+    _exige(hasattr(sous, "columns") and list(sous.columns) == ["essence", "dhp"], "Pour garder plusieurs colonnes, on donne une LISTE de noms : arbres[[\"essence\", \"dhp\"]] (deux crochets).")
+    _exige(len(sous) == 12, "Toutes les lignes doivent être gardées.")
+
+
+def _mp_e5(gros):
+    _exige(hasattr(gros, "columns"), "`gros` doit être un tableau filtré : arbres[condition].")
+    _exige(sorted(gros["arbre"]) == ["A02", "A04", "A05", "A08", "A09", "A11", "A12"], f"Tu gardes {len(gros)} arbres, on en attend 7 (dhp de 50 cm ou plus). As-tu utilisé >= ?")
+
+
+def _mp_e6(sel):
+    _exige(hasattr(sel, "columns"), "`sel` doit être un tableau filtré.")
+    _exige(sorted(sel["arbre"]) == ["A02", "A05", "A08"], f"On attend les 3 Sapelli de 50 cm ou plus, tu en as {len(sel)}. Avec pandas : & (pas and), et chaque condition entre parenthèses.")
+
+
+def _mp_e7(comptes):
+    _exige(hasattr(comptes, "to_dict") and comptes.to_dict() == {"Ayous": 5, "Sapelli": 3, "Iroko": 2, "Tali": 2}, "On attend le nombre d'arbres par essence : arbres[\"essence\"].value_counts().")
+
+
+def _mp_e8(tri):
+    _exige(hasattr(tri, "iloc"), "`tri` doit être le tableau trié.")
+    _exige(list(tri["arbre"])[:3] == ["A08", "A02", "A11"], "Le tableau doit être trié du plus GROS au plus petit dhp : ascending=False.")
+
+
+def _mp_e9(arbres):
+    _exige("g" in arbres.columns, "Crée la colonne avec arbres[\"g\"] = ...")
+    att = [math.pi * (d / 200) ** 2 for d in _arbres_ref()["dhp"]]
+    _exige(all(_proche(a, b, 1e-9) for a, b in zip(arbres["g"], att)), "Valeurs de g incorrectes. Même formule qu'au module 1, appliquée à la colonne entière : np.pi * (arbres[\"dhp\"] / 200) ** 2.")
+
+
+def _mp_e10(nb_nan):
+    _exige(int(nb_nan) == 2, f"{nb_nan} hauteurs manquantes, on en attend 2. .isna() donne True/False par ligne, .sum() compte les True.")
+
+
+def _mp_e11(propre):
+    _exige(hasattr(propre, "tolist") and propre.tolist() == ["Ayous", "Sapelli", "Iroko"], f"Résultat : {list(propre) if hasattr(propre, 'tolist') else propre}. Sur une colonne de texte, les méthodes passent par .str : noms.str.strip().str.capitalize().")
+
+
+def _mp_e12(releve):
+    v = releve.loc[releve["placette"] == 2, "dhp"].tolist()
+    if _proche(v[0], 5.12, 1e-6):
+        raise _Echec("Les dhp de la placette 2 ont été divisés deux fois. Recrée `releve` en relançant la cellule depuis le début.")
+    _exige(all(_proche(a, b, 1e-6) for a, b in zip(v, [51.2, 37.8, 48.2, 102.0])), f"Placette 2 : {v}. Attendu [51.2, 37.8, 48.2, 102.0]. Utilise releve.loc[condition, \"dhp\"] = releve.loc[condition, \"dhp\"] / 10.")
+    autres = releve.loc[releve["placette"] != 2, "dhp"].tolist()
+    _exige(autres == _arbres_ref().loc[_arbres_ref()["placette"] != 2, "dhp"].tolist(), "Les autres placettes ont été modifiées : la condition doit viser seulement la placette 2.")
+
+
+def _mp_e13(moy):
+    att = _arbres_ref().groupby("essence")["dhp"].mean()
+    _exige(hasattr(moy, "to_dict"), "`moy` doit être le résultat d'un groupby.")
+    d = moy.to_dict()
+    _exige(set(d) == set(att.index) and all(_proche(d[k], att[k], 1e-6) for k in att.index), "On attend le dhp MOYEN par essence : arbres.groupby(\"essence\")[\"dhp\"].mean().")
+
+
+def _mp_e14(nb_doublons, saisie_propre):
+    _exige(int(nb_doublons) == 1, f"{nb_doublons} doublon(s), on en attend 1. saisie.duplicated().sum().")
+    _exige(len(saisie_propre) == 12, f"Après suppression on attend 12 lignes, tu en as {len(saisie_propre)}.")
+
+
 _VERIFS = {k[1:]: v for k, v in globals().items() if k.startswith("_m") and callable(v)}
 
 
@@ -637,6 +721,20 @@ _INDICES = {
     "m6_e7": ["ev30.groupby(\"Species Common Name\").size() / effort.sum() * 100"],
     "m6_e8": ["Compte les événements de gorille par station, .reindex(effort.index, fill_value=0), puis divise par effort et multiplie par 100."],
     "m6_e9": ["Refais le calcul de l'exercice 6 avec pd.Timedelta(minutes=60)."],
+    "mp_e1": ["arbres.shape donne un couple (lignes, colonnes).", "n_lignes, n_colonnes = arbres.shape"],
+    "mp_e2": ["arbres.columns contient les noms ; list(...) en fait une liste."],
+    "mp_e3": ["Une colonne : arbres[\"dhp\"].", "Son maximum : arbres[\"dhp\"].max()."],
+    "mp_e4": ["Une liste de colonnes s'écrit entre crochets, et on la met dans les crochets du tableau : arbres[[\"essence\", \"dhp\"]]."],
+    "mp_e5": ["arbres[\"dhp\"] >= 50 donne une colonne de True/False.", "On met cette condition entre crochets pour garder les lignes True : arbres[arbres[\"dhp\"] >= 50]."],
+    "mp_e6": ["Deux conditions avec pandas : (condition1) & (condition2), chacune entre parenthèses.", "arbres[(arbres[\"essence\"] == \"Sapelli\") & (arbres[\"dhp\"] >= 50)]"],
+    "mp_e7": [".value_counts() s'applique à une colonne."],
+    "mp_e8": ["arbres.sort_values(\"dhp\", ascending=False)"],
+    "mp_e9": ["arbres[\"g\"] = np.pi * (arbres[\"dhp\"] / 200) ** 2 : le calcul s'applique à toutes les lignes d'un coup."],
+    "mp_e10": ["arbres[\"hauteur\"].isna().sum()"],
+    "mp_e11": ["noms.str.strip() retire les espaces ; enchaîne avec .str.capitalize()."],
+    "mp_e12": ["Condition : releve[\"placette\"] == 2.", ".loc[lignes, colonne] sélectionne une case ou un groupe de cases ; on peut leur affecter une valeur avec =."],
+    "mp_e13": ["groupby(\"essence\") regroupe, [\"dhp\"] choisit la colonne, .mean() calcule la moyenne de chaque groupe."],
+    "mp_e14": ["saisie.duplicated().sum() compte, saisie.drop_duplicates() supprime."],
 }
 
 def indice(exercice, niveau=1):
